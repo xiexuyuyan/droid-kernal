@@ -1,0 +1,4 @@
+rm -rf build/ out
+cmake -B build -G Ninja
+ninja -C build MediaServer
+./out/bin/frameworks/av/media/mediaserver/MediaServer
