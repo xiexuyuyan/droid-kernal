@@ -21,4 +21,3 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 add_subdirectory(system/core/libutils)
 add_subdirectory(system/core/liblog)
 add_subdirectory(frameworks/av/media/mediaserver)
-

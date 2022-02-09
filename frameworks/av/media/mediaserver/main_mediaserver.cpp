@@ -1,8 +1,8 @@
 //
 // Created by 23517 on 2022/1/26.
 //
-#include "plot.h"
-#include "log.h"
+#include "utils/plot.h"
+#include "log/log.h"
 #include <iostream>
 
 int main() {

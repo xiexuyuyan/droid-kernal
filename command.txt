@@ -1,4 +1,5 @@
 rm -rf build/ out
 cmake -B build -G Ninja
 ninja -C build MediaServer
+ninja -C build install liblog.so
 ./out/bin/frameworks/av/media/mediaserver/MediaServer
