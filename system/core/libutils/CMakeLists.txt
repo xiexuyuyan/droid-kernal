@@ -1,7 +1,7 @@
 project(libutils)
 
 # add include directories to build
-include_directories("include")
+include_directories(BEFORE "include")
 
 file(GLOB_RECURSE sourceFiles ./*.cpp)
 

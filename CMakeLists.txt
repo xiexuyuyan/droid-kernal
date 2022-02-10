@@ -18,6 +18,9 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 # release包优化
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
-add_subdirectory(system/core/libutils)
-add_subdirectory(system/core/liblog)
+# add_subdirectory(system/core/libutils)
+# add_subdirectory(system/core/liblog)
+add_subdirectory(system/core)
 add_subdirectory(frameworks/av/media/mediaserver)
+
+add_subdirectory(test/system/core)

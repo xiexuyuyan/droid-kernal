@@ -13,13 +13,13 @@ TARGET_INCLUDE_DIRECTORIES(
 )
 
 if (EXISTS "${LIBRARY_OUTPUT_PATH}/system/core/libutils/libutils.so")
-    message(STATUS "when cmake build, there exists /system/core/libutils/libutils.so")
+    message(STATUS "Project: when cmake build, there exists /system/core/libutils/libutils.so")
 else()
     file(WRITE ${LIBRARY_OUTPUT_PATH}/system/core/libutils/libutils.so "")
 endif ()
 
 if (EXISTS "${LIBRARY_OUTPUT_PATH}/system/core/liblog/liblog.so")
-    message(STATUS "when cmake build, there exists /system/core/liblog/liblog.so")
+    message(STATUS "Project: when cmake build, there exists /system/core/liblog/liblog.so")
 else()
     file(WRITE ${LIBRARY_OUTPUT_PATH}/system/core/liblog/liblog.so "")
 endif ()
