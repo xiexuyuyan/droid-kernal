@@ -23,14 +23,13 @@ int main() {
                 , "Light Ref count is "
                   + std::to_string(pLightClass->getStrongCount()));
 
-        droid::sp<LightClass> spLightClass = pLightClass;
-
+        droid::sp<LightClass> spLightClassDirect = pLightClass;
         LOG_D("LightPointerTest"
                 , "Light Ref count is "
                   + std::to_string(pLightClass->getStrongCount()));
 
         {
-            droid::sp<LightClass> spLightClass1 = pLightClass;
+            droid::sp<LightClass> spLightClassCopy(spLightClassDirect);
             LOG_D("LightPointerTest"
                     , "Light Ref count is "
                       + std::to_string(pLightClass->getStrongCount()));

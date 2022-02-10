@@ -8,24 +8,26 @@ namespace droid {
     public:
         inline sp() : m_ptr(nullptr) {}
 
-        sp(T *other);
+        sp(T* other);
 
-        sp(const sp<T> &other);
+        sp(const sp<T>& other);
 
         ~sp();
 
     private:
-        T *m_ptr;
+        T* m_ptr;
     };
 
     template<typename T>
-    sp<T>::sp(T *other): m_ptr(other) {
+    sp<T>::sp(T* other): m_ptr(other) {
+        LOG_D("StrongPointer", "copy constructor execute");
         if (other)
             other->incStrong(this);
     }
 
     template<typename T>
-    sp<T>::sp(const sp<T> &other): m_ptr(other.m_ptr) {
+    sp<T>::sp(const sp<T>& other): m_ptr(other.m_ptr) {
+        LOG_D("StrongPointer", "direct constructor execute");
         if (m_ptr)
             m_ptr->incStrong(this);
     }
