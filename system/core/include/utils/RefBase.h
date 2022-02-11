@@ -1,9 +1,52 @@
 #ifndef DROID_REF_BASE_H
 #define DROID_REF_BASE_H
 
+#include <atomic>
+
 #include "log/log.h"
 
 namespace droid {
+    // ---------------------------------------------------------------------------
+
+    class RefBase {
+    public:
+        void incStrong(const void *id) const;
+        void decStrong(const void *id) const;
+
+        // debug only
+        int32_t getStrongCount() const;
+
+        class weakref_type {
+        public:
+            void incWeak(const void* id);
+            void decWeak(const void* id);
+
+            // debug only
+            int32_t getWeakCount() const;
+        };
+
+        weakref_type* getWeakRefs() const;
+
+    protected:
+        RefBase();
+        virtual ~RefBase();
+
+        // Flags for extend object lifetime
+        enum {
+            OBJECT_LIFETIME_STRONG = 0x0000,
+            OBJECT_LIFETIME_WEAK   = 0x0001,
+            OBJECT_LIFETIME_MASK   = 0x0001
+        };
+
+        virtual void onFirstRef();
+        virtual void onLastStrongRef(const void* id);
+
+    private:
+        class weakref_impl;
+        weakref_impl* const mRefs;
+    };
+
+    // ---------------------------------------------------------------------------
 
     template<class T>
     class LightRefBase {
@@ -33,6 +76,7 @@ namespace droid {
     private:
         mutable volatile int32_t mCount;
     };
+    // ---------------------------------------------------------------------------
 
 } // namespace droid
 

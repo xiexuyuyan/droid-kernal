@@ -14,20 +14,21 @@ namespace droid {
 
         ~sp();
 
+        // accessors
+        inline T* operator-> () const { return m_ptr; }
+
     private:
         T* m_ptr;
     };
 
     template<typename T>
     sp<T>::sp(T* other): m_ptr(other) {
-        LOG_D("StrongPointer", "copy constructor execute");
         if (other)
             other->incStrong(this);
     }
 
     template<typename T>
     sp<T>::sp(const sp<T>& other): m_ptr(other.m_ptr) {
-        LOG_D("StrongPointer", "direct constructor execute");
         if (m_ptr)
             m_ptr->incStrong(this);
     }

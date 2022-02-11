@@ -14,6 +14,26 @@ public:
 };
 
 int main() {
+    LOG_D("---------", "rall start");
+    {
+        LOG_D("---------", "start");
+        LightClass* pLightClass = new LightClass();
+        droid::sp<LightClass> spLightClassDirect = pLightClass;
+        LOG_D("---------", "end");
+    }
+    LOG_D("---------", "rall end");
+
+
+    LOG_D("---------", "cycle start");
+    {
+        LOG_D("---------", "start");
+        LightClass* pLightClass = new LightClass();
+        droid::sp<LightClass>* spLightClassDirect = new droid::sp<LightClass>(pLightClass);
+        LOG_D("---------", "end");
+    }
+    LOG_D("---------", "cycle end");
+
+
     LOG_D("LightPointerTest", "start in light pointer test");
     {
 
