@@ -1,6 +1,7 @@
-#define LOG_TAG "RefBase.cpp"
-
 #include "utils/RefBase.h"
+
+#undef LOG_TAG
+#define LOG_TAG "RefBase.cpp"
 
 #define INITIAL_STRONG_VALUE (1<<28)
 
@@ -21,6 +22,10 @@ public:
     void removeStrongRef(const void* /*id*/){}
     void addWeakRef(const void* /*id*/){}
     void removeWeakRef(const void* /*id*/){}
+
+    ~weakref_impl() {
+        LOG_D(LOG_TAG, "weakref_impl destructor");
+    }
 };
 
 void droid::RefBase::incStrong(const void* id) const {
@@ -79,14 +84,11 @@ int32_t droid::RefBase::getStrongCount() const {
 
 droid::RefBase::RefBase(): mRefs(new weakref_impl(this)){}
 
-void droid::RefBase::onFirstRef() {}
-
-void droid::RefBase::onLastStrongRef(const void *id) {}
-
 droid::RefBase::~RefBase() {
     int32_t flags = mRefs->mFlags.load(std::memory_order_relaxed);
     if ((flags & OBJECT_LIFETIME_WEAK) == OBJECT_LIFETIME_WEAK) {
-        if (mRefs->mWeak.load(std::memory_order_relaxed)) {
+        int32_t c = mRefs->mWeak.load(std::memory_order_relaxed);
+        if (c == 0) {
             delete mRefs;
         }
     } else if (mRefs->mStrong.load(std::memory_order_relaxed)
@@ -96,6 +98,28 @@ droid::RefBase::~RefBase() {
               + std::to_string(mRefs->mWeak));
     }
     const_cast<weakref_impl*&>(mRefs) = nullptr;
+}
+
+void droid::RefBase::extendObjectLifetime(int32_t mode) {
+    mRefs->mFlags.fetch_or(mode, std::memory_order_relaxed);
+}
+void droid::RefBase::onFirstRef() {}
+
+void droid::RefBase::onLastStrongRef(const void *id) {}
+
+bool droid::RefBase::onIncStrongAttempted(uint32_t flags, const void* id) {
+    if (flags & FIRST_INC_STRONG) {
+        return true;// default flags=FIRST_INC_STRONG
+    } else {
+        return false;// not allow to be revived
+    }
+}
+
+void droid::RefBase::onLastWeakRef(const void* id) { }
+
+droid::RefBase::weakref_type *droid::RefBase::creatWeak(const void *id) const {
+    mRefs->incWeak(id);
+    return mRefs;
 }
 
 droid::RefBase::weakref_type *droid::RefBase::getWeakRefs() const {
@@ -142,8 +166,82 @@ void droid::RefBase::weakref_type::decWeak(const void *id) {
     } else {
         // This is the OBJECT_LIFETIME_WEAK case.
         // The last weak reference is gone, we can destroy the object
+        impl->mBase->onLastWeakRef(id);
+        // in object destructor, when mWeak == 0, we delete the impl
         delete impl->mBase;
     }
+}
+
+bool droid::RefBase::weakref_type::attemptIncStrong(const void *id) {
+    incWeak(id);
+
+    weakref_impl* const impl = static_cast<weakref_impl*>(this);
+
+    int32_t curCount = impl->mStrong.load(std::memory_order_relaxed);
+    LOG_D(LOG_TAG, "attemptIncStrong: "
+                   "cur strong count = " + std::to_string(curCount));
+    while (curCount > 0 && curCount != INITIAL_STRONG_VALUE) {
+        if (impl->mStrong.compare_exchange_weak(
+                curCount, curCount+1, std::memory_order_relaxed)) {
+            break;
+        }
+    }
+    if (curCount <= 0 || curCount == INITIAL_STRONG_VALUE) {
+        // in this case, there was never a strong reference
+        // or all strong reference hava been released
+        int32_t flags = impl->mFlags.load(std::memory_order_relaxed);
+        if ((flags & OBJECT_LIFETIME_MASK) == OBJECT_LIFETIME_STRONG) {
+            if (curCount <= 0) {
+                // The last strong-reference got released
+                // , the object cannot be revived.
+                decWeak(id);
+                return false;
+            }
+
+            // here, curCount == INITIAL_STRONG_VALUE, which means
+            // there never was a strong-reference, so we can try to
+            // promote this object; we need to do that atomically.
+            while (curCount > 0) {
+                if (impl->mStrong.compare_exchange_weak(
+                        curCount, curCount+1, std::memory_order_relaxed)) {
+                    break;
+                }
+            }
+
+            if (curCount <= 0) {
+                // promote failed, some other thread destroyed us in the
+                // meantime (i.e.: strong count reached zero)
+                decWeak(id);
+                return false;
+            }
+        } else {
+            // This object has an extended life-time
+            // i.e.: it can be revived from a weak-reference only
+            // Ask the object's implementation if it agrees to be revived
+            if (!impl->mBase->onIncStrongAttempted(FIRST_INC_STRONG, id)) {
+                decWeak(id);
+                return false;
+            }
+            // grab a strong-reference, which is always safe due to
+            // the extended life-time
+            curCount = impl->mStrong.fetch_add(1, std::memory_order_relaxed);
+            if (curCount != 0 && curCount != INITIAL_STRONG_VALUE) {
+                // This case means curCount is < 0
+                // , it has already been incremented by someone else
+                impl->mBase->onLastStrongRef(id);
+            }
+        }
+    }
+
+    impl->addStrongRef(id);
+
+    if (curCount == INITIAL_STRONG_VALUE) {
+        // there never was a strong-reference
+        impl->mStrong.fetch_sub(
+                INITIAL_STRONG_VALUE, std::memory_order_relaxed);
+    }
+
+    return true;
 }
 
 int32_t droid::RefBase::weakref_type::getWeakCount() const {

@@ -4,6 +4,10 @@
 #include <atomic>
 
 #include "log/log.h"
+#include "StrongPointer.h"
+
+#undef LOG_TAG
+#define LOG_TAG "RefBase.h"
 
 namespace droid {
     // ---------------------------------------------------------------------------
@@ -21,10 +25,14 @@ namespace droid {
             void incWeak(const void* id);
             void decWeak(const void* id);
 
+            // acquire a strong reference if there is already one
+            bool attemptIncStrong(const void* id);
+
             // debug only
             int32_t getWeakCount() const;
         };
 
+        weakref_type* creatWeak(const void* id) const;
         weakref_type* getWeakRefs() const;
 
     protected:
@@ -38,8 +46,17 @@ namespace droid {
             OBJECT_LIFETIME_MASK   = 0x0001
         };
 
+        // Flags for onIncStrongAttempted()
+        enum {
+            FIRST_INC_STRONG = 0x0001
+        };
+
+        void extendObjectLifetime(int32_t mode);
+
         virtual void onFirstRef();
         virtual void onLastStrongRef(const void* id);
+        virtual bool onIncStrongAttempted(uint32_t flags, const void* id);
+        virtual void onLastWeakRef(const void* id);
 
     private:
         class weakref_impl;
@@ -54,14 +71,14 @@ namespace droid {
         inline LightRefBase() : mCount(0) {}
 
         inline void incStrong(const void *id) const {
-            LOG_D("LightRefBase", "incStrong");
+            LOG_D(LOG_TAG, "incStrong");
             __sync_fetch_and_add(&mCount, 1);
         }
 
         inline void decStrong(const void *id) const {
-            LOG_D("LightRefBase", "decStrong");
+            LOG_D(LOG_TAG, "decStrong");
             if (__sync_fetch_and_sub(&mCount, 1) == 1) {
-                LOG_D("LightRefBase", "delete");
+                LOG_D(LOG_TAG, "delete");
                 delete static_cast<const T *>(this);
             }
         }
@@ -76,6 +93,54 @@ namespace droid {
     private:
         mutable volatile int32_t mCount;
     };
+    // ---------------------------------------------------------------------------
+    template <typename T>
+    class wp {
+    public:
+        typedef typename droid::RefBase::weakref_type weakref_type;
+
+        inline wp(): m_ptr(0){}
+
+        explicit wp(T* other);
+        wp(const wp<T>& other);
+
+        ~wp();
+
+        // promotion to sp
+        droid::sp<T> promote() const;
+    private:
+        T* m_ptr;
+        weakref_type* m_refs;
+    };
+
+    template<typename T>
+    wp<T>::wp(T* other): m_ptr(other) {
+        if (other)
+            m_refs = other->creatWeak(this);
+    }
+
+    template<typename T>
+    wp<T>::wp(const wp<T> &other): m_ptr(other.m_ptr), m_refs(other.m_refs) {
+        if (m_ptr)
+            m_refs->incWeak(this);
+    }
+
+    template<typename T>
+    wp<T>::~wp() {
+        LOG_D(LOG_TAG, "~wp: ");
+        if (m_ptr)
+            m_refs->decWeak(this);
+    }
+
+    template<typename T>
+    sp<T> wp<T>::promote() const {
+        sp<T> result;
+        if (m_ptr && m_refs->attemptIncStrong(&result)) {
+            result.set_pointer(m_ptr);
+        }
+        return result;
+    }
+
     // ---------------------------------------------------------------------------
 
 } // namespace droid
