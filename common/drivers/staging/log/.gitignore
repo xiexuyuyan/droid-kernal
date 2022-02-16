@@ -1,0 +1,6 @@
+*
+!.gitignore
+!logger.c
+!logger.h
+!CMakeLists.txt
+!Makefile
