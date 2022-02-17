@@ -35,6 +35,7 @@ struct logger_log {
     size_t             w_off; // the current write head offset
     size_t              head; // the head, or location start reading
     size_t              size; // the size of the log
+                              // , assign in create_log(, @size)
     struct list_head    logs; // the list of log channels
 };
 
@@ -49,6 +50,90 @@ struct logger_reader {
 
 static LIST_HEAD(log_list);
 
+static inline struct logger_log* file_get_log(struct file* file) {
+    if (file->f_mode & FMODE_READ) {
+        struct logger_reader* reader = file->private_data;
+        return reader->log;
+    }
+    return file->private_data;
+}
+
+static size_t logger_offset(struct logger_log* log, size_t n) {
+    return n & (log->size - 1);
+}
+
+static void fix_up_readers(struct logger_log* log, size_t len) {
+    // TODO("")
+}
+
+/* write method, implementing support for write(),
+ * writev(), and aio_write(). */
+static ssize_t logger_write_iter(struct kiocb* iocb
+        , struct iov_iter* from) {
+    struct logger_log* log = file_get_log(iocb->ki_filp);
+    struct logger_entry header;
+    ktime_t now;
+    size_t len, count, w_off;
+
+    count = min_t(size_t, iov_iter_count(from), LOGGER_ENTRY_MAX_PAYLOAD);
+
+    now = ktime_get();
+
+    header.pid = current->tgid;
+    header.tid = current->pid;
+    header.nsec = (s32)do_div(now, 1000000000);
+    header.sec = (s32)now;
+    header.euid = current_euid();
+    header.len = count;
+    header.hdr_size = sizeof(struct logger_entry);
+
+    if (unlikely(!header.len))// TODO why?
+        return 0;
+
+    mutex_lock(&log->mutex);
+
+    fix_up_readers(log, sizeof(struct logger_entry) + header.len);
+
+    // len reset with min (header, free space of buffer)
+    len = min(sizeof(header), log->size - log->w_off);
+
+    memcpy(log->buffer + log->w_off, &header, len);
+    memcpy(log->buffer, (char*)&header + len, sizeof(header)-len);
+    // until here, it just copies struct logger_entry's
+    // variable header to buffer, size is sizeof(header)
+
+    w_off = logger_offset(log, log->w_off + sizeof(struct logger_entry));
+
+    len = min(count, log->size - w_off);
+
+    if(copy_from_iter(log->buffer+w_off, len, from) != len) {
+        mutex_unlock(&log->mutex);
+        return -EFAULT;
+    }
+    if(copy_from_iter(log->buffer, count - len, from) != (count - len)) {
+        mutex_unlock(&log->mutex);
+        return -EFAULT;
+    }
+    // until here, it copies payload to addr after buffer+w_off
+
+    log->w_off = logger_offset(log, w_off + count);
+
+
+
+    char* str = vzalloc(count+1);
+    memcpy(str, log->buffer + w_off, count);
+    pr_info("log->w_off is %ld\n", log->w_off);
+    pr_info("str is %s\n", str);
+    vfree(str);
+
+
+
+    mutex_unlock(&log->mutex);
+
+    return len;
+}
+
+
 static struct logger_log* get_log_from_minor(int minor) {
     struct logger_log* log;
     list_for_each_entry(log, &log_list, logs) {
@@ -59,9 +144,10 @@ static struct logger_log* get_log_from_minor(int minor) {
 }
 
 static int logger_open(struct inode* inode, struct file* file) {
-    pr_info("into %s.\n", __FUNCTION__ );
     struct logger_log* log;
     int ret;
+
+    pr_info("into %s.\n", __FUNCTION__ );
 
     ret = nonseekable_open(inode, file);
     if (ret)
@@ -117,8 +203,8 @@ static int logger_release(struct inode* inode, struct file* file) {
 
 static const struct file_operations logger_fops = {
         .owner      = THIS_MODULE,/*
-        .read       = logger_read,
-        .write_iter = logger_write_iter,
+        .read       = logger_read,*/
+        .write_iter = logger_write_iter,/*
         .poll       = logger_poll,
         .unlocked_ioctl = logger_ioctl,*/
         .open       = logger_open,
