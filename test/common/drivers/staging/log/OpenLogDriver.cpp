@@ -6,18 +6,11 @@
 #include <unistd.h>
 
 #include "log/log.h"
+#include "logger.h"
 
 
 #define LOGGER_LOG_MAIN   "/dev/log_main"
 
-static void sample_test() {
-    size_t a = 1024;
-    size_t i = 0;
-    for (; i < 10; ++i) {
-        size_t b = (a - 1) & i;
-        LOG_D(LOG_TAG, "sample_test: " + std::to_string(b));
-    }
-}
 
 int main(int argc, char* argv[]) {
     LOG_D(LOG_TAG, "main: start");
@@ -34,11 +27,14 @@ int main(int argc, char* argv[]) {
         LOG_D(LOG_TAG, "main: fd = " + std::to_string(fd));
     }
 
-    char a[] = "hello world";
     if (argc == 2) {
         write(fd, argv[1], strlen(argv[1]));
     } else {
-        write(fd, a, strlen(a));
+        int lenHeader = sizeof(struct logger_entry);
+        char *readBuf = static_cast<char *>(malloc(lenHeader));
+        read(fd, readBuf, lenHeader);
+        struct logger_entry *entry = reinterpret_cast<logger_entry *>(readBuf);
+        LOG_D(LOG_TAG, "main(): entry->len = " + std::to_string(entry->len));
     }
 
     close(fd);
