@@ -1,5 +1,5 @@
-#ifndef LIB_LOG_LOGGER_H
-#define LIB_LOG_LOGGER_H
+#ifndef DRIVER_LOG_LOGGER_H
+#define DRIVER_LOG_LOGGER_H
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
@@ -25,4 +25,4 @@ struct logger_entry {
 
 #define LOGGER_ENTRY_MAX_PAYLOAD (4*1024)
 
-#endif // LIB_LOG_LOGGER_H
+#endif // DRIVER_LOG_LOGGER_H

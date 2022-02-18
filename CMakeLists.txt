@@ -25,5 +25,7 @@ add_subdirectory(frameworks/av/media/mediaserver)
 
 add_subdirectory(test/system/core)
 
-add_subdirectory(common/drivers/staging/log)
+# add_subdirectory(common/drivers/staging/log)
 add_subdirectory(test/common/drivers/staging/log)
+
+add_subdirectory(frameworks/droid/jni)

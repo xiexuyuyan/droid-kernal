@@ -185,8 +185,7 @@ start:
 
     ret = get_user_hdr_len(reader->r_ver)
             + get_entry_msg_len(log, reader->r_off);
-    // TODO("here we change from 'if(count < ret)' to ...")
-    if (count < get_user_hdr_len(reader->r_ver)) {
+    if (count < ret) {
         ret = -EINVAL;
         goto out;
     }
@@ -209,6 +208,7 @@ static inline struct logger_log* file_get_log(struct file* file) {
 
 static void fix_up_readers(struct logger_log* log, size_t len) {
     // TODO("when log_entry's header is split by two part")
+    // only happen when reset log->head while LOGGER_FLUSH_LOG
 }
 
 /* write method, implementing support for write(),
@@ -269,13 +269,14 @@ static ssize_t logger_write_iter(struct kiocb* iocb
 
     char* str = vzalloc(count+1);
     memcpy(str, log->buffer + w_off, count);
-    pr_info("log->w_off is %ld\n", log->w_off);
-    pr_info("str is %s\n", str);
+    pr_info("after write, log->w_off is %ld, str is %s\n", log->w_off, str);
     vfree(str);
 
 
 
     mutex_unlock(&log->mutex);
+
+    wake_up_interruptible(&log->wq);
 
     return len;
 }

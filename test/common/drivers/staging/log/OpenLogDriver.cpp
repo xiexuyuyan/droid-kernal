@@ -8,10 +8,6 @@
 #include "log/log.h"
 #include "logger.h"
 
-
-#define LOGGER_LOG_MAIN   "/dev/log_main"
-
-
 int main(int argc, char* argv[]) {
     LOG_D(LOG_TAG, "main: start");
 
@@ -30,11 +26,18 @@ int main(int argc, char* argv[]) {
     if (argc == 2) {
         write(fd, argv[1], strlen(argv[1]));
     } else {
-        int lenHeader = sizeof(struct logger_entry);
-        char *readBuf = static_cast<char *>(malloc(lenHeader));
-        read(fd, readBuf, lenHeader);
-        struct logger_entry *entry = reinterpret_cast<logger_entry *>(readBuf);
-        LOG_D(LOG_TAG, "main(): entry->len = " + std::to_string(entry->len));
+        struct logger_entry *entry;
+
+        entry = static_cast<logger_entry *>(malloc(LOGGER_ENTRY_MAX_LEN));
+
+        while (true) {
+            memset(entry, 0, LOGGER_ENTRY_MAX_LEN);
+            read(fd, entry, LOGGER_ENTRY_MAX_LEN);
+            LOG_D(LOG_TAG, "main(): entry->len = " + std::to_string(entry->len));
+            LOG_D(LOG_TAG, "main: entry->msg = " + std::string(entry->msg));
+        }
+
+        free(entry);
     }
 
     close(fd);

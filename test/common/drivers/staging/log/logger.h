@@ -1,3 +1,6 @@
+#ifndef LIB_LOG_LOGGER_H
+#define LIB_LOG_LOGGER_H
+
 #include <linux/types.h>
 #include <linux/ioctl.h>
 
@@ -13,3 +16,9 @@ struct logger_entry {
     uid_t euid; //Effective UID of logger
     char msg[0]; // the entry's payload
 };
+
+#define LOGGER_ENTRY_MAX_LEN (4 * 1024)
+
+#define LOGGER_LOG_MAIN   "/dev/log_main"
+
+#endif // LIB_LOG_LOGGER_H
