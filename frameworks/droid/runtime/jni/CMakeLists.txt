@@ -18,7 +18,7 @@ add_library(libdroid_runtime_shared SHARED ${sourceFiles})
 
 # set build/lib 's output name
 set_target_properties(libdroid_runtime_shared PROPERTIES OUTPUT_NAME "droid_runtime")
-set_target_properties(libdroid_runtime_shared PROPERTIES VERSION 1.0 SOVERSION 1)
+# set_target_properties(libdroid_runtime_shared PROPERTIES VERSION 1.0 SOVERSION 1)
 
 # include_directories("${JNI_INCLUDE_PATH}")
 target_include_directories(
@@ -26,6 +26,6 @@ target_include_directories(
         PRIVATE "${JNI_INCLUDE_PATH}"
         PRIVATE "${JNI_INCLUDE_PATH}/linux")
 
-string(REPLACE ${CMAKE_SOURCE_DIR} "" relativePath ${PROJECT_SOURCE_DIR})
+string(REPLACE ${CMAKE_SOURCE_DIR} "" relativePath ../../../..)
 # build path
 set(LIBRARY_OUTPUT_PATH  "${LIBRARY_OUTPUT_PATH}${relativePath}")

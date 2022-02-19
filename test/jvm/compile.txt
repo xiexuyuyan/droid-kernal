@@ -1,0 +1,19 @@
+ninja: Entering directory `build'
+[1/2]
+/usr/bin/c++   -I/usr/lib/jvm/java-8-openjdk-amd64/include
+               -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
+               -Wall
+               -std=gnu++11
+               -MD
+               -MT
+               test/jvm/CMakeFiles/CreateJvm.dir/CreateJvm.cpp.o
+               -MF
+               test/jvm/CMakeFiles/CreateJvm.dir/CreateJvm.cpp.o.d
+               -o
+               test/jvm/CMakeFiles/CreateJvm.dir/CreateJvm.cpp.o
+               -c ../test/jvm/CreateJvm.cpp
+
+[2/2]
+/usr/bin/c++  -Wall
+              test/jvm/CMakeFiles/CreateJvm.dir/CreateJvm.cpp.o
+              -o ../out/bin/CreateJvm
