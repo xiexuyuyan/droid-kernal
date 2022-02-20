@@ -68,7 +68,7 @@ void jvmInit(JavaVM* jvm, JNIEnv* env) {
 
         char vmOptionLibraryPath[1024] = "-Djava.library.path=";
         char droidRuntimeJniLibraryPath[128] =
-                "/mnt/c/Users/23517/CLionProjects/untitled/out/lib/frameworks/droid/jni";
+                "/mnt/c/Users/23517/CLionProjects/untitled/out/lib/frameworks/droid/runtime/jni";
         strcat(vmOptionLibraryPath, droidRuntimeJniLibraryPath);
 
         vmOption[1].optionString = vmOptionLibraryPath;

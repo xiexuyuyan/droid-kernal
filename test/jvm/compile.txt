@@ -1,3 +1,5 @@
+compile.txt
+
 ninja: Entering directory `build'
 [1/2]
 /usr/bin/c++   -I/usr/lib/jvm/java-8-openjdk-amd64/include
@@ -17,3 +19,13 @@ ninja: Entering directory `build'
 /usr/bin/c++  -Wall
               test/jvm/CMakeFiles/CreateJvm.dir/CreateJvm.cpp.o
               -o ../out/bin/CreateJvm
+
+java -Djava.library.path="/mnt/c/Users/23517/CLionProjects/untitled/out/lib/frameworks/droid/jni/"
+ -Djava.class.path="/mnt/c/Users/23517/IdeaProjects/Dust/build/classes/java/main/" Root "sdasd" "dd"
+
+
+insmod common/drivers/staging/log/logger.ko
+rmmod common/drivers/staging/log/logger.ko
+
+ninja libdroid_runtime.so && ninja CreateJvm && ./out/bin/test/jvm/CreateJvm
+ninja LogPrinter && ./out/bin/test/common/drivers/staging/log/LogPrinter

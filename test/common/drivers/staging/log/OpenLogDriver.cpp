@@ -2,11 +2,15 @@
 #define LOG_TAG "OpenLogDriver.cpp"
 
 #include <cstring>
+#include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "log/log.h"
 #include "logger.h"
+
+void LOG_D(const std::string& TAG, const std::string& text) {
+    std::cout<<TAG<<": "<<text<<std::endl;
+}
 
 int main(int argc, char* argv[]) {
     LOG_D(LOG_TAG, "main: start");
