@@ -1,20 +1,12 @@
-project(libdroid_runtime)
+project(core_zygotesocket)
 
-find_package(JNI REQUIRED)
-
-add_library(libdroid_runtime SHARED droid_util_Log.cpp)
-
-set_target_properties(libdroid_runtime PROPERTIES OUTPUT_NAME "droid_runtime")
+add_library(libcore_zygotesocket SHARED ZygoteSocketServer.cpp ZygoteSocketClient.cpp)
+set_target_properties(libcore_zygotesocket PROPERTIES OUTPUT_NAME "core_zygotesocket")
 
 target_include_directories(
-        libdroid_runtime
-        PRIVATE ${JNI_INCLUDE_DIRS}
+        libcore_zygotesocket
+        PRIVATE ${CMAKE_SOURCE_DIR}/frameworks/droid/core/include
         PRIVATE ${CMAKE_SOURCE_DIR}/system/core/include
-)
-
-target_link_libraries(
-        libdroid_runtime
-        ${JNI_LIBRARIES}
 )
 
 if (EXISTS "${LIBRARY_OUTPUT_PATH}/system/core/liblog/liblog.so")
@@ -24,7 +16,7 @@ else()
 endif ()
 
 find_library(liblog liblog.so ${LIBRARY_OUTPUT_PATH}/system/core/liblog)
-target_link_libraries(libdroid_runtime ${libutils} ${liblog})
+target_link_libraries(libcore_zygotesocket ${liblog})
 
 string(REPLACE ${CMAKE_SOURCE_DIR} "" relativePath ${PROJECT_SOURCE_DIR})
 set(LIBRARY_OUTPUT_PATH  "${LIBRARY_OUTPUT_PATH}${relativePath}")

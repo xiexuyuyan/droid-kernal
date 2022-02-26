@@ -1,8 +1,8 @@
-#include "droid_utils_Log.h"
+#include "droid_util_Log.h"
 
 #include "log/log.h"
 
-JNIEXPORT jint JNICALL Java_droid_utils_Log_println_1native(
+JNIEXPORT jint JNICALL Java_droid_util_Log_println_1native(
         JNIEnv* env, jclass clz, jint bufId
         , jint priority, jstring tag, jstring msg) {
     const char* cTag, *cMsg;
