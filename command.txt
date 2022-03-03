@@ -12,3 +12,34 @@ flush privileges;
 set(CMAKE_C_FLAGS_DEBUG "-std=c11")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)]]
+
+int main() {
+    pr_info("into %s.\n", __FUNCTION__ );
+
+    kstrdup("", GFP_KERNEL);
+
+    DEFINE_WAIT(wait);
+
+    struct task_struct* p = current;
+
+    kuid_t euid = current_euid();
+
+    ktime_t now;
+    (s32)do_div(now, 1000000000);
+
+    char __user* buf;
+    void* hdr;
+    size_t hdr_len;
+    ssize_t t = copy_to_user(buf, hdr, hdr_len);
+    return 0;
+}
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Kernel")
+    message(STATUS "Project: CMAKE_BUILD_TYPE == Kernel, current is compile kernel module logger")
+    file(GLOB_RECURSE sourceFiles *.c)
+else()
+    file(WRITE logger_tmp.c "")
+    file(GLOB_RECURSE sourceFiles *_tmp.c)
+endif ()
+
+add_library(dlog_shared SHARED ${sourceFiles})

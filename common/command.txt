@@ -1,0 +1,10 @@
+CMakeLists.txt 默认的 变量定义是 set(name "")
+这样才能在
+if (DEFINED ${name})
+这种格式中匹配到
+
+如果是在指令中加的选项
+-D name="Ninja"
+则只能在
+if (DEFINED name)
+中匹配到
