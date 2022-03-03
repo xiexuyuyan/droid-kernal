@@ -1,4 +1,4 @@
-obj-m += logger.o
+obj-m += binder.o
 
 KBUILD_CFLAGS += -g
 

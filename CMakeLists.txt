@@ -20,13 +20,17 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 # release包优化
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
-
+add_subdirectory(common/drivers/staging/binder)
+add_subdirectory(common/drivers/staging/log)
 
 add_subdirectory(system/core)
+
 add_subdirectory(frameworks/droid/runtime/jni)
 add_subdirectory(frameworks/droid/core/zygote/zygotesocket)
 add_subdirectory(frameworks/droid/core/zygote/jni)
 
-add_subdirectory(test/frameworks/droid/core/zygote/zygotesocket)
 add_subdirectory(test/common/drivers/staging/log)
+
+add_subdirectory(test/frameworks/droid/core/zygote/zygotesocket)
+
 add_subdirectory(test/jvm)

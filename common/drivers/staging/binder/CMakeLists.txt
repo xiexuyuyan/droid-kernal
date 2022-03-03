@@ -4,11 +4,10 @@ set(CMAKE_C_FLAGS "-std=gnu90")
 
 add_definitions(
         -D__KERNEL__
-        -DKBUILD_MODNAME="logger"
 )
 
 include_directories("/root/linux/linux-5.10.16.3-wsl/include/")
 include_directories("/root/linux/linux-5.10.16.3-wsl/arch/x86/include/")
 include_directories("/root/linux/linux-5.10.16.3-wsl/arch/x86/include/generated/")
 
-add_library(dlog_shared SHARED logger.c)
+add_library(dbinder_shared SHARED binder.c)

@@ -1,0 +1,5 @@
+*
+!.gitignore
+!binder.c
+!CMakeLists.txt
+!Makefile

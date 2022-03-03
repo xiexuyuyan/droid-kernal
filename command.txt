@@ -3,3 +3,12 @@ cmake -B build -G Ninja
 ninja -C build MediaServer
 ninja -C build install liblog.so
 ./out/bin/frameworks/av/media/mediaserver/MediaServer
+
+create database test character set utf8;
+grant all privileges on test.* to 'yuyan'@'%';
+flush privileges;
+
+#[[set(CMAKE_C_FLAGS "-std=c11")
+set(CMAKE_C_FLAGS_DEBUG "-std=c11")
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)]]
