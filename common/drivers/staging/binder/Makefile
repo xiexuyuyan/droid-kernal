@@ -1,4 +1,5 @@
-obj-m += binder.o
+obj-m += mbinder.o
+mbinder-objs := binder.o binder_alloc.o
 
 KBUILD_CFLAGS += -g
 

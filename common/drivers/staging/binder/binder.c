@@ -1,4 +1,4 @@
-#define pr_fmt(fmt) "binder: " fmt
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/fdtable.h>
 #include <linux/file.h>
@@ -29,3 +29,34 @@
 #include <uapi/linux/android/binder.h>
 
 #include <asm/cacheflush.h>
+
+#include "binder_internal.h"
+
+static int __init binder_init(void) {
+    int ret;
+/*
+    char* device_name,* device_tmp;
+    struct binder_device* device;
+    // todo(1. struct binder_device)
+    struct hlist_head* tmp;
+    char* device_names = NULL;
+*/
+
+    ret = binder_alloc_shrinker_init();
+
+    if (ret) return ret;
+
+    return 0;
+}
+
+static void __exit binder_exit(void) {
+
+}
+
+module_init(binder_init);
+module_exit(binder_exit);
+
+
+MODULE_LICENSE("GPL v2");
+MODULE_AUTHOR("xiexuyuyan, <2351783158@qq.com>");
+MODULE_DESCRIPTION("droid Binder");

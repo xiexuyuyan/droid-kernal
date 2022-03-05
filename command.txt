@@ -1,3 +1,11 @@
+alias clion='cd /mnt/c/Users/23517/CLionProjects/untitled/'
+alias cfw='cd /mnt/c/Users/23517/IdeaProjects/spring-minus'
+alias ninja='ninja -C build'
+alias cmake='cmake -B build -G Ninja -D CMAKE_BUILD_TYPE="Ninja"'
+alias ninta='ninja -t targets | grep phony | grep -v cache'
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+
 rm -rf build/ out
 cmake -B build -G Ninja
 ninja -C build MediaServer

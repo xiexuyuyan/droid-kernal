@@ -1,5 +1,9 @@
 *
 !.gitignore
 !binder.c
+!binder_internal.h
+!binder_alloc.h
+!binder_alloc.c
 !CMakeLists.txt
 !Makefile
+!command.txt
