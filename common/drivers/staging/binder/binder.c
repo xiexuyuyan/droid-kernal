@@ -32,6 +32,12 @@
 
 #include "binder_internal.h"
 
+char* binder_devices_param = "binder,hwbinder,vndbinder";
+
+struct binder_transaction_log binder_transaction_log;
+struct binder_transaction_log binder_transaction_log_failed;
+
+
 static int __init binder_init(void) {
     int ret;
 /*
@@ -43,14 +49,22 @@ static int __init binder_init(void) {
 */
 
     ret = binder_alloc_shrinker_init();
-
     if (ret) return ret;
 
-    return 0;
+    atomic_set(&binder_transaction_log.cur, ~0U);
+    atomic_set(&binder_transaction_log_failed.cur, ~0U);
+
+    ret = init_binderfs();
+    if (ret)
+        goto err_init_binder_device_failed;
+
+err_init_binder_device_failed:
+
+    return ret;
 }
 
 static void __exit binder_exit(void) {
-
+    binder_alloc_exit();
 }
 
 module_init(binder_init);

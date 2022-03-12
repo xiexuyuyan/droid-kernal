@@ -13,7 +13,7 @@ include_directories("/root/linux/linux-5.10.16.3-wsl/arch/x86/include/generated/
 
 if (DEFINED CMAKE_BUILD_TYPE)
     if (CMAKE_BUILD_TYPE STREQUAL "Clion")
-        file(GLOB_RECURSE sourceFiles binder.c binder_alloc.c)
+        file(GLOB_RECURSE sourceFiles binder.c binder_alloc.c binderfs.c)
     else()
         file(WRITE binder_tmp.c "")
         file(GLOB_RECURSE sourceFiles *_tmp.c)

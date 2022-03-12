@@ -13,6 +13,9 @@
 #include <uapi/linux/android/binderfs.h>
 #include "binder_alloc.h"
 
+extern char* binder_devices_param;
+
+extern int __init init_binderfs(void);
 
 struct binder_work {
     struct list_head entry;
@@ -57,6 +60,10 @@ struct binder_device {
     struct inode* binderfs_inode;
     // todo(4. what is inode's using in binder driver?)
     refcount_t ref;
+};
+
+struct binder_transaction_log {
+    atomic_t cur;
 };
 
 #endif // _LINUX_BINDER_INTERNAL_H

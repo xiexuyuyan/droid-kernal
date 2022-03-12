@@ -36,5 +36,6 @@ struct binder_alloc {
 
 
 extern int binder_alloc_shrinker_init(void);
+extern void binder_alloc_exit(void);
 
 #endif //_LINUX_BINDER_ALLOC_H
