@@ -4,7 +4,9 @@
 !binder_internal.h
 !binder_alloc.h
 !binder_alloc.c
+!binder_fs.h
 !binderfs.c
 !CMakeLists.txt
 !Makefile
 !command.txt
+!sequence.txt

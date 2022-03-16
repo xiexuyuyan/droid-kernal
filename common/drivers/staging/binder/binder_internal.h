@@ -13,9 +13,28 @@
 #include <uapi/linux/android/binderfs.h>
 #include "binder_alloc.h"
 
+extern const struct file_operations binder_fops;
+
 extern char* binder_devices_param;
 
 extern int __init init_binderfs(void);
+
+struct binderfs_mount_opts {
+    int max;
+    int stats_mode;
+    // todo(15. what means stats_mode)
+};
+
+struct binderfs_info {
+    struct ipc_namespace* ipc_ns;
+    struct dentry* control_dentry;
+    kuid_t root_uid;
+    kgid_t root_gid;
+    struct binderfs_mount_opts mount_opts;
+    int device_count;
+    struct dentry* proc_log_dir;
+};
+
 
 struct binder_work {
     struct list_head entry;
@@ -48,7 +67,10 @@ struct binder_node {
 
 struct binder_context {
     struct binder_node* binder_context_mgr_node;
+    struct mutex context_mgr_node_lock;
+    kuid_t binder_context_mgr_uid;
     // todo(5. struct binder_node)
+    const char* name;
 };
 
 struct binder_device {

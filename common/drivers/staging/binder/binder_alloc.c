@@ -145,6 +145,7 @@ int binder_alloc_shrinker_init(void) {
 }
 
 void binder_alloc_exit(void) {
+    pr_info("into %s.\n", __FUNCTION__ );
     unregister_shrinker(&binder_shrinker);
     list_lru_destroy(&binder_alloc_lru);
 }

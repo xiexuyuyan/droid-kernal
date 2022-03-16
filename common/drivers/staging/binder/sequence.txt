@@ -1,0 +1,21 @@
+binder_init
+  binder_alloc_shrinker_init
+    register_shrinker
+      list_lru_init
+      binder_shrink_count
+        list_lru_count
+      binder_shrink_scan
+        binder_alloc_free_page
+    unregister_shrinker
+    list_lru_destroy
+
+  init_binderfs
+    alloc_chrdev_region
+    register_filesystem
+      binderfs_mount
+        mount_nodev
+          binderfs_fill_super
+           todo-8
+      binderfs_kill_super
+        todo-9
+    unregister_chrdev_region

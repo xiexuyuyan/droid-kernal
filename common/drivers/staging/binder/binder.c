@@ -31,11 +31,16 @@
 #include <asm/cacheflush.h>
 
 #include "binder_internal.h"
+#include "binder_fs.h"
 
 char* binder_devices_param = "binder,hwbinder,vndbinder";
 
 struct binder_transaction_log binder_transaction_log;
 struct binder_transaction_log binder_transaction_log_failed;
+
+const struct file_operations binder_fops = {
+        .owner = THIS_MODULE
+};
 
 
 static int __init binder_init(void) {
@@ -64,7 +69,9 @@ err_init_binder_device_failed:
 }
 
 static void __exit binder_exit(void) {
+    pr_info("into %s.\n", __FUNCTION__ );
     binder_alloc_exit();
+    binder_fs_exit();
 }
 
 module_init(binder_init);

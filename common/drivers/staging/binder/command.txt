@@ -9,3 +9,9 @@ to free pagecache, dentries and inodes, use echo 3 > /proc/sys/vm/drop_caches.
 Because this is a non-destructive operation and dirty objects are not freeable, the user should run sync first
 
 alias mshrink='echo 2 > /proc/sys/vm/drop_caches'
+
+
+mkdir --mode=0755 /dev/binderfs
+mount -t binder none /dev/binderfs
+
+umount /dev/binderfs
