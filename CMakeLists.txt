@@ -29,7 +29,15 @@ add_subdirectory(frameworks/droid/runtime/jni)
 add_subdirectory(frameworks/droid/core/zygote/zygotesocket)
 add_subdirectory(frameworks/droid/core/zygote/jni)
 
+add_subdirectory(frameworks/av/media/mediaserver)
+
+add_subdirectory(frameworks/native)
+
+
+
 add_subdirectory(test/common/drivers/staging/log)
+
+add_subdirectory(test/system/core)
 
 add_subdirectory(test/frameworks/droid/core/zygote/zygotesocket)
 

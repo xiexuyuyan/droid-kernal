@@ -19,12 +19,16 @@ namespace droid {
 
         ~sp();
 
+        sp& operator = (T* other);
+
         // accessors
         inline T* operator-> () const { return m_ptr; }
         inline T* get ()        const { return m_ptr; }
+        // todo(how to override operator !=)
+        inline bool operator != (const void* p) const { return m_ptr != p; }
 
-        void set_pointer(T* ptr);
     private:
+        void set_pointer(T* ptr);
         T* m_ptr;
     };
 
@@ -52,6 +56,20 @@ namespace droid {
         m_ptr = ptr;
     }
 
+    template<typename T>
+    sp<T>& sp<T>::operator =(T* other) {
+        T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
+        if (other) {
+            // todo(do some PAGE check, in 4K)
+            other->incStrong(this);
+        }
+        if (oldPtr) oldPtr->decStrong(this);
+        if (oldPtr != *const_cast<T* volatile*>(&m_ptr))
+            // todo(why? this appears in android source)
+            ;
+        m_ptr = other;
+        return *this;
+    }
 } // namespace droid
 
 
