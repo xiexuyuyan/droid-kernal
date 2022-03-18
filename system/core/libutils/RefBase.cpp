@@ -37,9 +37,9 @@ void droid::RefBase::incStrong(const void* id) const {
     const int32_t c = refs->mStrong.fetch_add(
             1, std::memory_order_relaxed);
     LOG_D(LOG_TAG,
-          "droid::RefBase::incStrong():"
+          std::string("droid::RefBase::incStrong():"
           "mStrong.fetch_add = "
-          + std::to_string(c));
+          + std::to_string(c)).c_str());
     if (c != INITIAL_STRONG_VALUE) {
         return;
     }
@@ -47,9 +47,9 @@ void droid::RefBase::incStrong(const void* id) const {
     int32_t old = refs->mStrong.fetch_sub(
             INITIAL_STRONG_VALUE, std::memory_order_relaxed);
     LOG_D(LOG_TAG,
-          "droid::RefBase::incStrong():"
+          std::string("droid::RefBase::incStrong():"
           "mStrong.fetch_sub(INITIAL_STRONG_VALUE) = "
-          + std::to_string(old));
+          + std::to_string(old)).c_str());
 
     refs->mBase->onFirstRef();
 }
@@ -61,9 +61,9 @@ void droid::RefBase::decStrong(const void* id) const {
     const int32_t c = refs->mStrong.fetch_sub(
             1, std::memory_order_relaxed);
     LOG_D(LOG_TAG,
-          "droid::RefBase::decStrong():"
+          std::string("droid::RefBase::decStrong():"
           "mStrong.fetch_sub = "
-          + std::to_string(c));
+          + std::to_string(c)).c_str());
     if (c == 1) {
         std::atomic_thread_fence(std::memory_order_acquire);
         refs->mBase->onLastStrongRef(id);
@@ -94,8 +94,8 @@ droid::RefBase::~RefBase() {
     } else if (mRefs->mStrong.load(std::memory_order_relaxed)
                           == INITIAL_STRONG_VALUE) {
         LOG_D(LOG_TAG,
-              "Explicit destruction, weak count = "
-              + std::to_string(mRefs->mWeak));
+              std::string("Explicit destruction, weak count = "
+              + std::to_string(mRefs->mWeak)).c_str());
     }
     const_cast<weakref_impl*&>(mRefs) = nullptr;
 }
@@ -132,9 +132,9 @@ void droid::RefBase::weakref_type::incWeak(const void *id) {
     const int32_t c = impl->mWeak.fetch_add(
             1, std::memory_order_relaxed);
     LOG_D(LOG_TAG,
-          "droid::RefBase::weakref_type::incWeak():"
+          std::string("droid::RefBase::weakref_type::incWeak():"
           "mWeak.fetch_add = "
-          + std::to_string(c));
+          + std::to_string(c)).c_str());
 }
 
 void droid::RefBase::weakref_type::decWeak(const void *id) {
@@ -143,9 +143,9 @@ void droid::RefBase::weakref_type::decWeak(const void *id) {
     const int32_t c = impl->mWeak.fetch_sub(
             1, std::memory_order_relaxed);
     LOG_D(LOG_TAG,
-          "droid::RefBase::weakref_type::decWeak():"
+          std::string("droid::RefBase::weakref_type::decWeak():"
           "mWeak.fetch_sub = "
-          + std::to_string(c));
+          + std::to_string(c)).c_str());
     if (c != 1) {
         return;
     }
@@ -178,8 +178,8 @@ bool droid::RefBase::weakref_type::attemptIncStrong(const void *id) {
     weakref_impl* const impl = static_cast<weakref_impl*>(this);
 
     int32_t curCount = impl->mStrong.load(std::memory_order_relaxed);
-    LOG_D(LOG_TAG, "attemptIncStrong: "
-                   "cur strong count = " + std::to_string(curCount));
+    LOG_D(LOG_TAG, std::string("attemptIncStrong: "
+                   "cur strong count = " + std::to_string(curCount)).c_str());
     while (curCount > 0 && curCount != INITIAL_STRONG_VALUE) {
         if (impl->mStrong.compare_exchange_weak(
                 curCount, curCount+1, std::memory_order_relaxed)) {

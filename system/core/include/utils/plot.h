@@ -2,7 +2,6 @@
 #define LIB_UTILS_PLOT_H
 
 #include "iostream"
-#include "log/log.h"
 
 int plotCircle(int r);
 

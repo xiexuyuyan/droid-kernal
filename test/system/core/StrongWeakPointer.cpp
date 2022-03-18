@@ -17,10 +17,10 @@ public:
         int32_t weak = ref->getWeakCount();
 
         LOG_D(LOG_TAG, "---------- printRefCount()");
-        LOG_D(LOG_TAG, "Strong Ref Count = "
-                       + std::to_string(strongValue));
-        LOG_D(LOG_TAG, "Weak Ref Count = "
-                       + std::to_string(weak));
+        LOG_D(LOG_TAG, std::string("Strong Ref Count = "
+                       + std::to_string(strongValue)).c_str());
+        LOG_D(LOG_TAG, std::string("Weak Ref Count = "
+                       + std::to_string(weak)).c_str());
         LOG_D(LOG_TAG, "---------- printRefCount()");
     }
 };
@@ -62,7 +62,7 @@ void testStrongPinter() {
         droid::sp<StrongImpl> spStrong = wpStrong.promote();
         char addr[20];
         std::sprintf(addr, "-%p-", spStrong.get());
-        LOG_D(LOG_TAG, "main: " + std::string(addr));
+        LOG_D(LOG_TAG, std::string("main: " + std::string(addr)).c_str());
     }
     LOG_D(LOG_TAG, "---------- strong impl end");
 }
@@ -83,7 +83,7 @@ void testWeakPinter() {
         weak->printRefCount();
         char addr[20];// too small will cause "*** stack smashing detected ***"
         std::sprintf(addr, "-%p-", spWeak.get());
-        LOG_D(LOG_TAG, "main: " + std::string(addr));
+        LOG_D(LOG_TAG, std::string("main: " + std::string(addr)).c_str());
     }
     LOG_D(LOG_TAG, "---------- weak impl end");
 }

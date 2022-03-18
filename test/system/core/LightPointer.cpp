@@ -21,7 +21,7 @@ int main() {
         droid::sp<LightClass> spLightClassDirect = pLightClass;
         LOG_D("---------", "end");
     }
-    LOG_D("---------", "rall end");
+    LOG_D("---------", "rall end\n\n\n");
 
 
     LOG_D("---------", "cycle start");
@@ -31,7 +31,7 @@ int main() {
         droid::sp<LightClass>* spLightClassDirect = new droid::sp<LightClass>(pLightClass);
         LOG_D("---------", "end");
     }
-    LOG_D("---------", "cycle end");
+    LOG_D("---------", "cycle end\n\n\n");
 
 
     LOG_D("LightPointerTest", "start in light pointer test");
@@ -40,24 +40,24 @@ int main() {
         LightClass *pLightClass = new LightClass();
 
         LOG_D("LightPointerTest"
-                , "Light Ref count is "
-                  + std::to_string(pLightClass->getStrongCount()));
+                , std::string("Light Ref count is "
+                  + std::to_string(pLightClass->getStrongCount())).c_str());
 
         droid::sp<LightClass> spLightClassDirect = pLightClass;
         LOG_D("LightPointerTest"
-                , "Light Ref count is "
-                  + std::to_string(pLightClass->getStrongCount()));
+                , std::string("Light Ref count is "
+                  + std::to_string(pLightClass->getStrongCount())).c_str());
 
         {
             droid::sp<LightClass> spLightClassCopy(spLightClassDirect);
             LOG_D("LightPointerTest"
-                    , "Light Ref count is "
-                      + std::to_string(pLightClass->getStrongCount()));
+                    , std::string("Light Ref count is "
+                      + std::to_string(pLightClass->getStrongCount())).c_str());
         }
 
         LOG_D("LightPointerTest"
-                , "Light Ref count is "
-                  + std::to_string(pLightClass->getStrongCount()));
+                , std::string("Light Ref count is "
+                  + std::to_string(pLightClass->getStrongCount())).c_str());
 
     }
     LOG_D("LightPointerTest", "end in light pointer test");
