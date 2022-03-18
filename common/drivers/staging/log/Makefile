@@ -3,9 +3,9 @@ obj-m += logger.o
 KBUILD_CFLAGS += -g
 
 all:
-	@make -C /root/linux/linux-5.10.16.3-wsl/ M=$(PWD) modules
+	@make -C /root/linux/linux-kernel-wsl/ M=$(PWD) modules
 
 clean:
-	@make -C /root/linux/linux-5.10.16.3-wsl/ M=$(PWD) clean
+	@make -C /root/linux/linux-kernel-wsl/ M=$(PWD) clean
 
 

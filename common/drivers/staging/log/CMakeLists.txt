@@ -7,9 +7,9 @@ add_definitions(
         -DKBUILD_MODNAME="logger"
 )
 
-include_directories("/root/linux/linux-5.10.16.3-wsl/include/")
-include_directories("/root/linux/linux-5.10.16.3-wsl/arch/x86/include/")
-include_directories("/root/linux/linux-5.10.16.3-wsl/arch/x86/include/generated/")
+include_directories("/root/linux/linux-kernel-wsl/include/")
+include_directories("/root/linux/linux-kernel-wsl/arch/x86/include/")
+include_directories("/root/linux/linux-kernel-wsl/arch/x86/include/generated/")
 
 if (DEFINED CMAKE_BUILD_TYPE)
     if (CMAKE_BUILD_TYPE STREQUAL "Clion")
