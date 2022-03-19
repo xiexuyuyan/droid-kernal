@@ -17,6 +17,24 @@
 
 #include <linux/sched/signal.h>
 
+enum {
+    LOGGER_DEBUG_OPEN_CLOSE  = 1U << 0,
+    LOGGER_DEBUG_READ        = 1U << 1,
+    LOGGER_DEBUG_WRITE_ITER  = 1U << 2,
+};
+
+static uint32_t logger_debug_mask =
+        LOGGER_DEBUG_OPEN_CLOSE
+        | LOGGER_DEBUG_WRITE_ITER
+        | LOGGER_DEBUG_READ;
+module_param_named(debug_mask, logger_debug_mask, uint, 0644);
+
+#define debug_logger(mask, x...) \
+    do {                         \
+        if (logger_debug_mask & mask) \
+            pr_info_ratelimited(x);\
+    } while(0)
+
 /*----------------------------------------------------------------------*/
 #ifndef __KERNEL__
 #define likely(x) ((x) != 0)
@@ -143,7 +161,7 @@ static ssize_t logger_read(struct file* file
     ssize_t ret;
     DEFINE_WAIT(wait);
 
-    pr_info("into %s.\n", __FUNCTION__ );
+    debug_logger(LOGGER_DEBUG_READ, "into %s.\n", __FUNCTION__);
 
 start:
     while (1) {
@@ -220,7 +238,9 @@ static ssize_t logger_write_iter(struct kiocb* iocb
     ktime_t now;
     size_t len, count, w_off;
 
-    pr_info("into %s.\n", __FUNCTION__ );
+    char* str;
+
+    debug_logger(LOGGER_DEBUG_WRITE_ITER, "into %s.\n", __FUNCTION__);
 
     count = min_t(size_t, iov_iter_count(from), LOGGER_ENTRY_MAX_PAYLOAD);
 
@@ -266,12 +286,13 @@ static ssize_t logger_write_iter(struct kiocb* iocb
     log->w_off = logger_offset(log, w_off + count);
 
 
-
-    char* str = vzalloc(count+1);
+    str = vzalloc(count+1);
     memcpy(str, log->buffer + w_off, count);
-    pr_info("after write, log->w_off is %ld, str is %s\n", log->w_off, str);
+    debug_logger(LOGGER_DEBUG_WRITE_ITER
+                 , "after write, log->w_off is %ld, str is %s\n"
+                 , log->w_off
+                 , str);
     vfree(str);
-
 
 
     mutex_unlock(&log->mutex);
@@ -297,7 +318,7 @@ static int logger_open(struct inode* inode, struct file* file) {
     struct logger_log* log;
     int ret;
 
-    pr_info("into %s.\n", __FUNCTION__ );
+    debug_logger(LOGGER_DEBUG_OPEN_CLOSE, "into %s.\n", __FUNCTION__);
 
     ret = nonseekable_open(inode, file);
     if (ret)
@@ -335,7 +356,7 @@ static int logger_open(struct inode* inode, struct file* file) {
 }
 
 static int logger_release(struct inode* inode, struct file* file) {
-    pr_info("into %s.\n", __FUNCTION__ );
+    debug_logger(LOGGER_DEBUG_OPEN_CLOSE, "into %s.\n", __FUNCTION__);
     if (file->f_mode & FMODE_READ) {
         struct logger_reader* reader = file->private_data;
         struct logger_log* log = reader->log;
