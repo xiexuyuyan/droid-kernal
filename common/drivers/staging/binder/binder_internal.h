@@ -17,7 +17,19 @@ extern const struct file_operations binder_fops;
 
 extern char* binder_devices_param;
 
+extern bool is_binderfs_device(const struct inode* inode);
+
 extern int __init init_binderfs(void);
+
+enum binder_stat_types {
+    BINDER_STAT_PROC,
+    BINDER_STAT_COUNT
+};
+
+struct binder_stats {
+    atomic_t obj_created[BINDER_STAT_COUNT];
+    atomic_t obj_deleted[BINDER_STAT_COUNT];
+};
 
 struct binderfs_mount_opts {
     int max;
@@ -49,8 +61,26 @@ struct binder_work {
     } type;
 };
 
+struct binder_priority {
+    unsigned int sched_policy;
+    int prio;
+};
+
 struct binder_proc {
     // todo(6. struct binder_proc)
+    struct hlist_node proc_node;
+    int pid;
+    struct task_struct* tsk;
+    struct list_head waiting_threads;
+    wait_queue_head_t  freeze_wait;
+
+    struct list_head todo;
+    struct list_head delivered_death;
+    struct binder_priority default_priority;
+    struct binder_alloc alloc;
+    struct binder_context* context;
+    spinlock_t inner_lock;
+    spinlock_t outer_lock;
 };
 
 struct binder_node {

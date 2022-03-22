@@ -34,7 +34,7 @@ struct binder_alloc {
     size_t pages_high;
 };
 
-
+extern void binder_alloc_init(struct binder_alloc* alloc);
 extern int binder_alloc_shrinker_init(void);
 extern void binder_alloc_exit(void);
 

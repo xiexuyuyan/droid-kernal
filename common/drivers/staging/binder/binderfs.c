@@ -70,6 +70,12 @@ static inline struct binderfs_info* BINDERFS_I(const struct inode* inode) {
     return inode->i_sb->s_fs_info;
 }
 
+bool is_binderfs_device(const struct inode* inode) {
+    if (inode->i_sb->s_magic == BINDERFS_SUPER_MAGIC)
+        return true;
+    return false;
+}
+
 static int binderfs_binder_device_create(
         struct inode* ref_inode
         , struct binderfs_device __user* userp
@@ -467,6 +473,9 @@ static int binderfs_fill_super(
             name++;
     }
 
+    /*if (info->mount_opts.stats_mode == STATS_GLOBAL)
+        return init_binider_logs(sb);
+*/
     return 0;
 }
 

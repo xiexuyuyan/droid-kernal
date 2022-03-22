@@ -12,6 +12,14 @@ alias mshrink='echo 2 > /proc/sys/vm/drop_caches'
 
 
 mkdir --mode=0755 /dev/binderfs
-mount -t binder none /dev/binderfs
+
+insmod mbinder.ko
+mount -t binder binder /dev/binderfs -o stats=global
+
+ln -s /dev/binderfs/binder /dev/binder
 
 umount /dev/binderfs
+rmmod mbinder.ko
+
+
+./out/bin/test/common/drivers/staging/log/LogPrinter | grep --color=auto -v "RefBase.h" &

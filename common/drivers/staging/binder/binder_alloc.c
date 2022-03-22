@@ -132,6 +132,12 @@ static struct shrinker binder_shrinker = {
         .seeks = DEFAULT_SEEKS,
 };
 
+void binder_alloc_init(struct binder_alloc* alloc) {
+    alloc->pid = current->group_leader->pid;
+    mutex_init(&alloc->mutex);
+    INIT_LIST_HEAD(&alloc->buffers);
+}
+
 int binder_alloc_shrinker_init(void) {
     int ret = list_lru_init(&binder_alloc_lru);
 
