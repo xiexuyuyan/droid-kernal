@@ -41,6 +41,7 @@ enum {
     BINDER_DEBUG_FAILED_TRANSACTION = 1U << 1,
     BINDER_DEBUG_DEAD_TRANSACTION   = 1U << 2,
     BINDER_DEBUG_OPEN_CLOSE         = 1U << 3,
+    BINDER_DEBUG_SPINLOCKS          = 1U << 15,
 };
 
 static uint32_t binder_debug_mask =
@@ -49,6 +50,9 @@ static uint32_t binder_debug_mask =
         | BINDER_DEBUG_DEAD_TRANSACTION
         | BINDER_DEBUG_OPEN_CLOSE;
 module_param_named(debug_mask, binder_debug_mask, uint, 0644);
+
+static DECLARE_WAIT_QUEUE_HEAD(binder_user_error_wait);
+static int binder_stop_on_user_error;
 
 #define debug_binder(mask, x...) \
     do { \
@@ -70,6 +74,28 @@ static inline void binder_stats_created(enum binder_stat_types type) {
 static inline void binder_stats_deleted(enum binder_stat_types type) {
     atomic_inc(&binder_stats.obj_deleted[type]);
 }
+
+#define binder_inner_proc_lock(_proc) _binder_inner_proc_lock(_proc, __LINE__)
+static void _binder_inner_proc_lock(
+        struct binder_proc* proc, int line)
+                __acquires(&proc->inner_lock) {
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n"
+                 , __FUNCTION__, line);
+    spin_lock(&proc->inner_lock);
+}
+
+#define binder_inner_proc_unlock(_proc) _binder_inner_proc_unlock(_proc, __LINE__)
+static void _binder_inner_proc_unlock(
+        struct binder_proc* proc, int line)
+                __releases(&proc->inner_lock) {
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n"
+                 , __FUNCTION__, line);
+    spin_unlock(&proc->inner_lock);
+}
+
+
 
 static bool is_rt_policy(int policy) {
     return policy == SCHED_FIFO || policy == SCHED_RR;
@@ -147,10 +173,135 @@ static int binder_open(struct inode* inode, struct file* file) {
     return 0;
 }
 
+static struct binder_thread* binder_get_thread_ilocked(
+        struct binder_proc* proc, struct binder_thread* new_thread) {
+    struct binder_thread* thread = NULL;
+    struct rb_node* parent = NULL;
+    struct rb_node** p = &proc->threads.rb_node;
+
+    while (*p) {
+        parent = *p;
+        thread = rb_entry(parent, struct binder_thread, rb_node);
+
+        // todo(20. what mean to thread in rb_tree'left or right?)
+        if (current->pid < thread->pid)
+            p = &(*p)->rb_left;
+        else if (current->pid > thread->pid)
+            p = &(*p)->rb_right;
+        else
+            return thread;
+    }
+
+    if (!new_thread)
+        return NULL;
+
+    thread = new_thread;
+    binder_stats_created(BINDER_STAT_THREAD);
+    thread->proc = proc;
+    thread->pid = current->pid;
+    get_task_struct(current);
+    thread->task = current;
+    atomic_set(&thread->tmp_ref, 0);
+    init_waitqueue_head(&thread->wait);
+    INIT_LIST_HEAD(&thread->todo);
+    rb_link_node(&thread->rb_node, parent, p);
+    rb_insert_color(&thread->rb_node, &proc->threads);
+    thread->looper_need_return = true;
+    thread->return_error.work.type = BINDER_WORK_RETURN_ERROR;
+    thread->return_error.cmd = BR_OK;
+    thread->reply_error.work.type = BINDER_WORK_RETURN_ERROR;
+    thread->reply_error.cmd = BR_OK;
+    INIT_LIST_HEAD(&new_thread->waiting_thread_node);
+    return thread;
+}
+
+static struct binder_thread* binder_get_thread(struct binder_proc*  proc) {
+    struct binder_thread* thread;
+    struct binder_thread* new_thread;
+
+    binder_inner_proc_lock(proc);
+    thread = binder_get_thread_ilocked(proc, NULL);
+    binder_inner_proc_unlock(proc);
+
+    if (!thread) {
+        new_thread = kzalloc(sizeof(*thread), GFP_KERNEL);
+        if (new_thread == NULL)
+            return NULL;
+        binder_inner_proc_lock(proc);
+        thread = binder_get_thread_ilocked(proc, new_thread);
+        binder_inner_proc_unlock(proc);
+        if (thread != new_thread)
+            kfree(new_thread);
+    }
+
+    return thread;
+}
+
+static long binder_ioctl(
+        struct file* file, unsigned int cmd, unsigned long arg) {
+    int ret;
+    struct  binder_proc* proc = file->private_data;
+    struct binder_thread* thread;
+    unsigned int size = _IOC_SIZE(cmd);
+    void* __user ubuf = (void* __user)arg;
+
+    debug_binder(BINDER_DEBUG_OPEN_CLOSE
+                 , "%s: %d:%d, cmd = %x, arg = %lx\n"
+                 , __FUNCTION__
+                 , proc->pid, current->pid, cmd, arg);
+
+    // todo(18. trace)
+    // todo(19. alloc self test)
+
+    ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
+    if (ret)
+        goto err_unlocked;
+
+    thread = binder_get_thread(proc);
+    if (thread == NULL) {
+        ret = -ENOMEM;
+        goto err;
+    }
+
+    switch (cmd) {
+        case BINDER_VERSION: {
+            struct binder_version* __user ver = ubuf;
+            if (size != sizeof(struct binder_version)) {
+                ret = -EINVAL;
+                goto err;
+            }
+            if (put_user(BINDER_CURRENT_PROTOCOL_VERSION
+                         , &ver->protocol_version)) {
+                ret = -EINVAL;
+                goto err;
+            }
+            break;
+        }
+        default:
+            ret = -EINVAL;
+            goto err;
+    }
+    ret = 0;
+
+err:
+    if (thread)
+        thread->looper_need_return = false;
+    wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
+    if (ret && ret != -EINTR)
+        pr_info("%s %d:%d, cmd = %x, arg = %lx, returned %d\n"
+                , __FUNCTION__
+                , proc->pid, current->pid, cmd, arg, ret);
+
+err_unlocked:
+    // todo(18. trace release-18 lock)
+    return ret;
+}
 
 const struct file_operations binder_fops = {
         .owner = THIS_MODULE,
         .open = binder_open,
+        .unlocked_ioctl = binder_ioctl,
+        .compat_ioctl = binder_ioctl,
 };
 
 

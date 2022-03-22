@@ -23,6 +23,7 @@ extern int __init init_binderfs(void);
 
 enum binder_stat_types {
     BINDER_STAT_PROC,
+    BINDER_STAT_THREAD,
     BINDER_STAT_COUNT
 };
 
@@ -54,11 +55,17 @@ struct binder_work {
     enum binder_work_type {
         BINDER_WORK_TRANSACTION = 1,
         BINDER_WORK_TRANSACTION_COMPLETE,
+        BINDER_WORK_RETURN_ERROR,
         BINDER_WORK_NODE,
-        BINDER_WORK_DEA_BINDER,
-        BINDER_WORK_DEA_BINDER_AND_CLEAR,
+        BINDER_WORK_DEAD_BINDER,
+        BINDER_WORK_DEAD_BINDER_AND_CLEAR,
         BINDER_WORK_CLEAR_DEATH_NOTIFICATION,
     } type;
+};
+
+struct binder_error {
+    struct binder_work work;
+    uint32_t cmd;
 };
 
 struct binder_priority {
@@ -69,6 +76,7 @@ struct binder_priority {
 struct binder_proc {
     // todo(6. struct binder_proc)
     struct hlist_node proc_node;
+    struct rb_root threads;
     int pid;
     struct task_struct* tsk;
     struct list_head waiting_threads;
@@ -116,6 +124,20 @@ struct binder_device {
 
 struct binder_transaction_log {
     atomic_t cur;
+};
+
+struct binder_thread {
+    struct binder_proc* proc;
+    struct rb_node rb_node;
+    struct list_head waiting_thread_node;
+    int pid;
+    bool looper_need_return;
+    struct list_head todo;
+    struct binder_error return_error;
+    struct binder_error reply_error;
+    wait_queue_head_t wait;
+    atomic_t tmp_ref;
+    struct task_struct* task;
 };
 
 #endif // _LINUX_BINDER_INTERNAL_H
