@@ -4,6 +4,8 @@
 #include "utils/RefBase.h"
 #include "utils/Mutex.h"
 
+#include "utils/String8.h"
+
 namespace droid {
 
     class ProcessState: public virtual RefBase {
@@ -15,6 +17,10 @@ namespace droid {
         ~ProcessState() override;
 
         ProcessState& operator=(const ProcessState& o);
+
+        String8 mDriverName;
+        int mDriverFD;
+        void* mVMStart;
     };
 
 } // namespace droid
