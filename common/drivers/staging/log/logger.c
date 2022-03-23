@@ -246,8 +246,13 @@ static ssize_t logger_write_iter(struct kiocb* iocb
 
     now = ktime_get();
 
+#ifdef WSL
+    header.pid = task_tgid_vnr(current);
+    header.tid = task_pid_vnr(current);
+#else
     header.pid = current->tgid;
     header.tid = current->pid;
+#endif
     header.nsec = (s32)do_div(now, 1000000000);
     header.sec = (s32)now;
     header.euid = current_euid();

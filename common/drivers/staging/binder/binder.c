@@ -125,8 +125,13 @@ static int binder_open(struct inode* inode, struct file* file) {
     debug_binder(BINDER_DEBUG_OPEN_CLOSE
                  , "%s: %d:%d\n"
                  , __FUNCTION__
+#ifdef WSL
+                 , task_tgid_vnr(current)
+                 , task_pid_vnr(current));
+#else
                  , current->group_leader->pid
                  , current->pid);
+#endif
 
     proc = kzalloc(sizeof(*proc), GFP_KERNEL);
     if (proc == NULL)
@@ -184,15 +189,22 @@ static struct binder_thread* binder_get_thread_ilocked(
     struct binder_thread* thread = NULL;
     struct rb_node* parent = NULL;
     struct rb_node** p = &proc->threads.rb_node;
+    pid_t pid;
+
+#ifdef WSL
+    pid = task_pid_vnr(current);
+#else
+    pid = current->pid;
+#endif
 
     while (*p) {
         parent = *p;
         thread = rb_entry(parent, struct binder_thread, rb_node);
 
         // todo(20. what mean to thread in rb_tree'left or right?)
-        if (current->pid < thread->pid)
+        if (pid < thread->pid)
             p = &(*p)->rb_left;
-        else if (current->pid > thread->pid)
+        else if (pid > thread->pid)
             p = &(*p)->rb_right;
         else
             return thread;
@@ -204,7 +216,11 @@ static struct binder_thread* binder_get_thread_ilocked(
     thread = new_thread;
     binder_stats_created(BINDER_STAT_THREAD);
     thread->proc = proc;
+#ifdef WSL
+    thread->pid = task_pid_vnr(current);
+#else
     thread->pid = current->pid;
+#endif
     get_task_struct(current);
     thread->task = current;
     atomic_set(&thread->tmp_ref, 0);
@@ -254,7 +270,13 @@ static long binder_ioctl(
     debug_binder(BINDER_DEBUG_OPEN_CLOSE
                  , "%s: %d:%d, cmd = %x, arg = %lx\n"
                  , __FUNCTION__
-                 , proc->pid, current->pid, cmd, arg);
+                 , proc->pid
+#ifdef WSL
+                 , task_pid_vnr(current)
+#else
+                 , current->pid
+#endif
+                 , cmd, arg);
 
     // todo(18. trace)
     // todo(19. alloc self test)
@@ -310,7 +332,13 @@ err:
     if (ret && ret != -EINTR)
         pr_info("%s %d:%d, cmd = %x, arg = %lx, returned %d\n"
                 , __FUNCTION__
-                , proc->pid, current->pid, cmd, arg, ret);
+                , proc->pid
+#ifdef WSL
+                , task_pid_vnr(current)
+#else
+                , current->pid
+#endif
+                , cmd, arg, ret);
 
 err_unlocked:
     // todo(18. trace release-18 lock)
