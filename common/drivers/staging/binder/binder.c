@@ -36,6 +36,12 @@
 static HLIST_HEAD(binder_procs);
 static DEFINE_MUTEX(binder_procs_lock);
 
+#ifndef SZ_1K
+#define SZ_1K 0x400
+#endif
+
+#define FORBIDDEN_MMAP_FLAGS (VM_WRITE)
+
 enum {
     BINDER_DEBUG_USER_ERROR         = 1U << 0,
     BINDER_DEBUG_FAILED_TRANSACTION = 1U << 1,
@@ -264,6 +270,20 @@ static long binder_ioctl(
     }
 
     switch (cmd) {
+        case BINDER_SET_MAX_THREADS: {
+            int max_threads;
+            if (copy_from_user(
+                    &max_threads
+                    , ubuf
+                    , sizeof(max_threads))) {
+                ret = -EINVAL;
+                goto err;
+            }
+            binder_inner_proc_lock(proc);
+            proc->max_threads = max_threads;
+            binder_inner_proc_unlock(proc);
+            break;
+        }
         case BINDER_VERSION: {
             struct binder_version* __user ver = ubuf;
             if (size != sizeof(struct binder_version)) {
@@ -297,11 +317,83 @@ err_unlocked:
     return ret;
 }
 
+static void binder_vma_open(struct vm_area_struct* vma) {
+    struct binder_proc* proc = vma->vm_private_data;
+
+    debug_binder(BINDER_DEBUG_OPEN_CLOSE
+                 , "%s: %d %lx-%lx (%ld K) vma %lx page %lx\n"
+                 , __FUNCTION__, proc->pid, vma->vm_start, vma->vm_end
+                 , (vma->vm_end - vma->vm_start) / SZ_1K, vma->vm_flags
+                 , (unsigned long)pgprot_val(vma->vm_page_prot));
+    // todo(20220323-112324 why is there null implementation about open?)
+}
+static void binder_vma_close(struct vm_area_struct* vma) {
+    struct binder_proc* proc = vma->vm_private_data;
+
+    debug_binder(BINDER_DEBUG_OPEN_CLOSE
+                 , "%s: %d %lx-%lx (%ld K) vma %lx page %lx\n"
+                 , __FUNCTION__, proc->pid, vma->vm_start, vma->vm_end
+                 , (vma->vm_end - vma->vm_start) / SZ_1K, vma->vm_flags
+                 , (unsigned long)pgprot_val(vma->vm_page_prot));
+    binder_alloc_vma_close(&proc->alloc);
+}
+
+static vm_fault_t binder_vm_fault(struct vm_fault* vmf) {
+    return VM_FAULT_SIGBUS;
+}
+
+static const struct vm_operations_struct binder_vm_ops = {
+        .open = binder_vma_open,
+        .close = binder_vma_close,
+        .fault = binder_vm_fault,
+};
+
+static int binder_mmap(struct file* file, struct vm_area_struct* vma) {
+    int ret;
+    struct binder_proc* proc = file->private_data;
+    const char* failure_string;
+
+    if (proc->tsk != current->group_leader)
+        return -EINVAL;
+
+    debug_binder(BINDER_DEBUG_OPEN_CLOSE
+                 , "%s: %d %lx-%lx (%ld K) vma %lx page %lx\n"
+                 , __FUNCTION__, proc->pid, vma->vm_start, vma->vm_end
+                 , (vma->vm_end - vma->vm_start) / SZ_1K, vma->vm_flags
+                 , (unsigned long)pgprot_val(vma->vm_page_prot));
+
+    if (vma->vm_flags & FORBIDDEN_MMAP_FLAGS) {
+        ret = -EPERM;
+        failure_string = "bad vm_flags";
+        goto err_bad_arg;
+    }
+    vma->vm_flags |= VM_DONTCOPY | VM_MIXEDMAP;
+    vma->vm_flags &= ~VM_MAYWRITE;
+
+    vma->vm_ops = &binder_vm_ops;
+    vma->vm_private_data = proc;
+
+    ret = binder_alloc_mmap_handler(&proc->alloc, vma);
+    if (ret)
+        return ret;
+    return 0;
+
+err_bad_arg:
+    pr_err("%s: %d %lx-%lx %s failed %d\n"
+           , __FUNCTION__
+           , proc->pid
+           , vma->vm_start, vma->vm_end
+           , failure_string, ret);
+
+    return ret;
+}
+
 const struct file_operations binder_fops = {
         .owner = THIS_MODULE,
         .open = binder_open,
         .unlocked_ioctl = binder_ioctl,
         .compat_ioctl = binder_ioctl,
+        .mmap = binder_mmap,
 };
 
 

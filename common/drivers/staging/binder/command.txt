@@ -22,4 +22,4 @@ umount /dev/binderfs
 rmmod mbinder.ko
 
 
-./out/bin/test/common/drivers/staging/log/LogPrinter | grep --color=auto -v "RefBase.h" &
+./out/bin/test/common/drivers/staging/log/LogPrinter | grep --color=auto -v 'RefBase.[h(cpp)]' &

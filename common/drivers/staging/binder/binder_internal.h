@@ -84,6 +84,7 @@ struct binder_proc {
 
     struct list_head todo;
     struct list_head delivered_death;
+    int max_threads;
     struct binder_priority default_priority;
     struct binder_alloc alloc;
     struct binder_context* context;
