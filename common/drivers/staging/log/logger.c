@@ -246,7 +246,7 @@ static ssize_t logger_write_iter(struct kiocb* iocb
 
     now = ktime_get();
 
-#ifdef WSL
+#ifdef __WSL__
     header.pid = task_tgid_vnr(current);
     header.tid = task_pid_vnr(current);
 #else

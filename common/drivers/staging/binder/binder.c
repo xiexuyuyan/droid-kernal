@@ -125,7 +125,7 @@ static int binder_open(struct inode* inode, struct file* file) {
     debug_binder(BINDER_DEBUG_OPEN_CLOSE
                  , "%s: %d:%d\n"
                  , __FUNCTION__
-#ifdef WSL
+#ifdef __WSL__
                  , task_tgid_vnr(current)
                  , task_pid_vnr(current));
 #else
@@ -164,7 +164,11 @@ static int binder_open(struct inode* inode, struct file* file) {
     binder_alloc_init(&proc->alloc);
 
     binder_stats_created(BINDER_STAT_PROC);
+#ifdef __WSL__
+    proc->pid = task_tgid_vnr(current);
+#else
     proc->pid = current->group_leader->pid;
+#endif
     INIT_LIST_HEAD(&proc->delivered_death);
     INIT_LIST_HEAD(&proc->waiting_threads);
     file->private_data = proc;
@@ -191,7 +195,7 @@ static struct binder_thread* binder_get_thread_ilocked(
     struct rb_node** p = &proc->threads.rb_node;
     pid_t pid;
 
-#ifdef WSL
+#ifdef __WSL__
     pid = task_pid_vnr(current);
 #else
     pid = current->pid;
@@ -216,7 +220,7 @@ static struct binder_thread* binder_get_thread_ilocked(
     thread = new_thread;
     binder_stats_created(BINDER_STAT_THREAD);
     thread->proc = proc;
-#ifdef WSL
+#ifdef __WSL__
     thread->pid = task_pid_vnr(current);
 #else
     thread->pid = current->pid;
@@ -271,7 +275,7 @@ static long binder_ioctl(
                  , "%s: %d:%d, cmd = %x, arg = %lx\n"
                  , __FUNCTION__
                  , proc->pid
-#ifdef WSL
+#ifdef __WSL__
                  , task_pid_vnr(current)
 #else
                  , current->pid
@@ -333,7 +337,7 @@ err:
         pr_info("%s %d:%d, cmd = %x, arg = %lx, returned %d\n"
                 , __FUNCTION__
                 , proc->pid
-#ifdef WSL
+#ifdef __WSL__
                 , task_pid_vnr(current)
 #else
                 , current->pid

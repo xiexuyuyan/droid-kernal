@@ -4,6 +4,7 @@ set(CMAKE_C_FLAGS "-std=gnu90")
 
 add_definitions(
         -D__KERNEL__
+        -D__WSL__
         -DKBUILD_MODNAME="binder"
 )
 

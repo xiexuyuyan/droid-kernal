@@ -10,6 +10,11 @@ Because this is a non-destructive operation and dirty objects are not freeable, 
 
 alias mshrink='echo 2 > /proc/sys/vm/drop_caches'
 
+cd common/drivers/staging/log
+insmod logger.ko
+cd -
+
+cd common/drivers/staging/binder
 
 mkdir --mode=0755 /dev/binderfs
 
@@ -17,6 +22,8 @@ insmod mbinder.ko
 mount -t binder binder /dev/binderfs -o stats=global
 
 ln -s /dev/binderfs/binder /dev/binder
+
+cd -
 
 umount /dev/binderfs
 rmmod mbinder.ko

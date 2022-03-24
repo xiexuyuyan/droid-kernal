@@ -278,7 +278,11 @@ static struct shrinker binder_shrinker = {
 };
 
 void binder_alloc_init(struct binder_alloc* alloc) {
+#ifdef __WSL__
+    alloc->pid = task_tgid_vnr(current);
+#else
     alloc->pid = current->group_leader->pid;
+#endif
     mutex_init(&alloc->mutex);
     INIT_LIST_HEAD(&alloc->buffers);
 }

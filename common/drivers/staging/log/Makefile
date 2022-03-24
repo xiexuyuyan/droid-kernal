@@ -1,7 +1,7 @@
 obj-m += logger.o
 
 KBUILD_CFLAGS += -g
-KBUILD_CFLAGS += -DWSL
+KBUILD_CFLAGS += -D__WSL__
 
 all:
 	@make -C /root/linux/linux-kernel-wsl/ M=$(PWD) modules
