@@ -2,6 +2,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "log/log.h"
 
@@ -26,6 +27,19 @@ int __droid_log_buf_write(int bufID, int priority, const char *tag, const char *
     vec[2].iov_len = strlen(msg) + 1;
 
     return write_to_log(static_cast<LogId>(bufID), vec, 3);
+}
+
+int __droid_log_buf_write_f(
+        int bufID, int priority, const char* tag
+        , const char* format, ...) {
+    char buf[LOGGER_MAX_LENGTH] = {0};
+    va_list p;
+
+    va_start(p, format);
+    vsprintf(buf, format, p);
+    va_end(p);
+
+    return __droid_log_buf_write(bufID, priority, tag, buf);
 }
 
 static int write_to_log_init(LogId logId, struct iovec *vec, size_t nr) {

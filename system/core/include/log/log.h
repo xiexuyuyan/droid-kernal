@@ -28,10 +28,19 @@ enum LogPriority {
 #define LOGGER_LOG_SYSTEM "log_system"
 #define LOGGER_LOG_MAIN   "log_main"
 
+#define LOGGER_MAX_LENGTH (4*1024)
+
 int __droid_log_buf_write(int bufID, int prio, const char *tag, const char *msg);
+int __droid_log_buf_write_f(
+        int bufID, int priority, const char* tag
+        , const char* format, ...);
 
 #define LOG_I(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_INFO, (TAG), (MSG))
 #define LOG_D(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_DEBUG, (TAG), (MSG))
 #define LOG_E(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_ERROR, (TAG), (MSG))
+
+#define LOGF_I(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_INFO, TAG, FORMAT, ##__VA_ARGS__)
+#define LOGF_D(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_DEBUG, TAG, FORMAT, ##__VA_ARGS__)
+#define LOGF_E(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_ERROR, TAG, FORMAT, ##__VA_ARGS__)
 
 #endif // LIB_LOG_LOG_H
