@@ -119,4 +119,43 @@ namespace droid {
         }
     }
 
+    sp<IBinder> ProcessState::getContextObject(const sp<IBinder> &caller) {
+        // todo(20220325-095602 getStrongProxyForHandle(0))
+        sp<IBinder> context = getStrongProxyForHandle(0);
+
+        if (context == nullptr) {
+            LOG_E(TAG, "getContextObject: not able to get context object on ???");
+            // todo(20220325-125839 String8@mDriverName)
+        }
+
+        // todo(20220325-125920 some...)
+
+        return context;
+    }
+
+
+    ProcessState::handle_entry *ProcessState::lookupHandleLocked(int32_t handle) {
+        // todo(20220325-152308 Vector)
+        return nullptr;
+    }
+
+    sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle) {
+        sp<IBinder> result;
+
+        AutoMutex  _l(mLock);
+
+        handle_entry* entry = lookupHandleLocked(handle);
+
+
+
+
+
+
+
+
+
+
+        return result;
+    }
+
 } // namespace droid

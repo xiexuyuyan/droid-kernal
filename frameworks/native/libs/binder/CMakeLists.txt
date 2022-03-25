@@ -1,11 +1,14 @@
 project(libbinder)
 
-add_library(libbinder SHARED Static.cpp ProcessState.cpp)
+set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+
+add_library(libbinder SHARED Static.cpp IServiceManager.cpp ProcessState.cpp)
 set_target_properties(libbinder PROPERTIES OUTPUT_NAME "binder")
 
 target_include_directories(
         libbinder
         PRIVATE ${CMAKE_SOURCE_DIR}/system/core/include
+        PRIVATE ${CMAKE_SOURCE_DIR}/frameworks/idl/include
 )
 
 if (EXISTS "${LIBRARY_OUTPUT_PATH}/system/core/liblog/liblog.so")

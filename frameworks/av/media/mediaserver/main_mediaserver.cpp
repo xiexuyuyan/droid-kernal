@@ -1,6 +1,7 @@
 #include "log/log.h"
 #include "utils/RefBase.h"
 #include "binder/ProcessState.h"
+#include "binder/IServiceManager.h"
 
 #include <unistd.h>
 
@@ -15,6 +16,7 @@ int main() {
     LOG_D("main", ("start in media server! in pid: " + std::to_string(currentPid)).c_str());
 
     sp<ProcessState> proc(ProcessState::self());
+    sp<IServiceManager> sm = defaultServiceManager();
 
     return 0;
 }

@@ -24,8 +24,9 @@ namespace droid {
         // accessors
         inline T* operator-> () const { return m_ptr; }
         inline T* get ()        const { return m_ptr; }
-        // todo(how to override operator !=)
+        // todo(how to override operator != and ==)
         inline bool operator != (const void* p) const { return m_ptr != p; }
+        inline bool operator == (const void* p) const { return m_ptr == p; }
 
     private:
         void set_pointer(T* ptr);

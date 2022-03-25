@@ -1,5 +1,7 @@
 project(mediaserver)
 
+set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+
 file(GLOB_RECURSE sourceFiles ./*.cpp)
 
 add_executable(MediaServer main_mediaserver.cpp)
