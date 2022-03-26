@@ -7,12 +7,12 @@
 namespace droid {
     int32_t Mutex::lock() {
         mutex.lock();
-        LOG_D(TAG, "lock: ");
+        LOG_V(TAG, "lock: ");
         return 0;
     }
 
     void Mutex::unlock() {
         mutex.unlock();
-        LOG_D(TAG, "unlock: ");
+        LOG_V(TAG, "unlock: ");
     }
 }

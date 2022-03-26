@@ -1,3 +1,5 @@
+#ifndef DROID_ERRORS_H
+#define DROID_ERRORS_H
 
 #include <errno.h>
 #include <stdint.h>
@@ -44,4 +46,6 @@ enum {
 std::string statusToString(status_t status);
 
 }  // namespace droid
+
+#endif // DROID_ERRORS_H
 	

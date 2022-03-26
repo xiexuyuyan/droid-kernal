@@ -11,11 +11,11 @@
 using namespace droid;
 
 int main() {
-    int currentPid = getpid();
 
-    LOG_D("main", ("start in media server! in pid: " + std::to_string(currentPid)).c_str());
+    LOGF_D(TAG, "main: start in %d.", getpid());
 
     sp<ProcessState> proc(ProcessState::self());
+
     sp<IServiceManager> sm = defaultServiceManager();
 
     return 0;

@@ -1,6 +1,3 @@
-#undef TAG
-#define TAG "ProcessState.cpp"
-
 #include "binder/ProcessState.h"
 
 #include <pthread.h>
@@ -19,6 +16,9 @@
 #include "utils/Errors.h"
 #include "Static.h"
 
+#undef TAG
+#define TAG "ProcessState.cpp"
+
 #define BINDER_VM_SIZE ((1 * 1024 * 1024) - sysconf(_SC_PAGE_SIZE) * 2)
 #define DEFAULT_MAX_BINDER_THREADS 15
 
@@ -26,7 +26,7 @@ const char* defaultDriver = "/dev/binder";
 
 namespace droid {
     sp<ProcessState> ProcessState::self() {
-        LOG_D(TAG, "self(): ");
+        LOG_D(TAG, "self: ");
         Mutex::Autolock _l(gProcessMutex);
         if (gProgress != nullptr) {
             return gProgress;
@@ -49,10 +49,7 @@ namespace droid {
         int fd = open(driver, O_RDWR | O_CLOEXEC);
 
         int currentPid = getpid();
-
-        LOG_D(TAG, ("open_driver: fd = " + std::to_string(fd)
-                    + ", current pid = " + std::to_string(currentPid)
-                    ).c_str());
+        LOGF_V(TAG, "open_driver: in %d, fd = %d", currentPid, fd);
 
         if (fd >= 0) {
             int vers = 0;
@@ -86,9 +83,7 @@ namespace droid {
                             + std::to_string(errno)).c_str());
             }
         } else {
-            LOG_E(TAG, ("open_driver: "
-                        "Open " + std::string(driver) + " failed: "
-                        + std::to_string(errno)).c_str());
+            LOGF_E(TAG, "open_driver: open '%s' failed: %d", driver, errno);
         }
 
         return fd;
@@ -98,9 +93,8 @@ namespace droid {
                 mDriverName(driver)
                 , mDriverFD(open_driver(driver))
                 , mVMStart(MAP_FAILED){
-        LOG_D(TAG,
-              std::string("ProcessState(): constructor with driver "
-              + std::string(driver)).c_str());
+        LOGF_V(TAG, "ProcessState: constructor with driver: '%s', fd: %d"
+               , mDriverName.c_str(), mDriverFD);
         if (mDriverFD >= 0) {
             mVMStart = mmap(nullptr
                     , BINDER_VM_SIZE
@@ -135,7 +129,8 @@ namespace droid {
 
 
     ProcessState::handle_entry *ProcessState::lookupHandleLocked(int32_t handle) {
-        // todo(20220325-152308 Vector)
+        const size_t N = mHandleToObject.size();
+        LOGF_D(TAG, "lookupHandleLocked: N = %d", N);
         return nullptr;
     }
 
@@ -145,14 +140,6 @@ namespace droid {
         AutoMutex  _l(mLock);
 
         handle_entry* entry = lookupHandleLocked(handle);
-
-
-
-
-
-
-
-
 
 
         return result;

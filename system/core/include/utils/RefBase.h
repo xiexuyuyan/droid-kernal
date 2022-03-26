@@ -6,8 +6,8 @@
 #include "log/log.h"
 #include "StrongPointer.h"
 
-#undef LOG_TAG
-#define LOG_TAG "RefBase.h"
+#undef TAG
+#define TAG "RefBase.h"
 
 namespace droid {
     // ---------------------------------------------------------------------------
@@ -71,14 +71,14 @@ namespace droid {
         inline LightRefBase() : mCount(0) {}
 
         inline void incStrong(const void *id) const {
-            LOG_D(LOG_TAG, "incStrong");
+            LOG_D(TAG, "incStrong");
             __sync_fetch_and_add(&mCount, 1);
         }
 
         inline void decStrong(const void *id) const {
-            LOG_D(LOG_TAG, "decStrong");
+            LOG_D(TAG, "decStrong");
             if (__sync_fetch_and_sub(&mCount, 1) == 1) {
-                LOG_D(LOG_TAG, "delete");
+                LOG_D(TAG, "delete");
                 delete static_cast<const T *>(this);
             }
         }
@@ -127,7 +127,7 @@ namespace droid {
 
     template<typename T>
     wp<T>::~wp() {
-        LOG_D(LOG_TAG, "~wp: ");
+        LOG_D(TAG, "~wp: ");
         if (m_ptr)
             m_refs->decWeak(this);
     }

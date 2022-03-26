@@ -1,6 +1,7 @@
 project(mediaserver)
 
 set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 file(GLOB_RECURSE sourceFiles ./*.cpp)
 

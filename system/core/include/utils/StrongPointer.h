@@ -3,8 +3,8 @@
 
 #include "log/log.h"
 
-#undef LOG_TAG
-#define LOG_TAG "StrongPointer.h"
+#undef TAG
+#define TAG "StrongPointer.h"
 
 namespace droid {
 
@@ -35,19 +35,21 @@ namespace droid {
 
     template<typename T>
     sp<T>::sp(T* other): m_ptr(other) {
+        LOG_V(TAG, "sp(T*): ");
         if (other)
             other->incStrong(this);
     }
 
     template<typename T>
     sp<T>::sp(const sp<T>& other): m_ptr(other.m_ptr) {
+        LOG_V(TAG, "sp(sp<T>&): ");
         if (m_ptr)
             m_ptr->incStrong(this);
     }
 
     template<typename T>
     sp<T>::~sp() {
-        LOG_D(LOG_TAG, "~sp: ");
+        LOG_V(TAG, "~sp: ");
         if (m_ptr)
             m_ptr->decStrong(this);
     }
@@ -62,6 +64,7 @@ namespace droid {
         T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
         if (other) {
             // todo(do some PAGE check, in 4K)
+            LOG_V(TAG, "operator=: increase strong refs");
             other->incStrong(this);
         }
         if (oldPtr) oldPtr->decStrong(this);

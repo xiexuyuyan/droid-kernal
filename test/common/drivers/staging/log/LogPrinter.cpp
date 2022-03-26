@@ -33,6 +33,11 @@ static char LogPriorityCharacter[] {
 int main(int argc, char* argv[]) {
     std::cout<<"---start print log---"<<std::endl;
 
+    for (int i = 1; i < argc; ++i) {
+        std::cout<<"argv["<<i;
+        std::cout<<"] = "<<argv[i]<<std::endl;
+    }
+
     int fd;
     fd = open(LOGGER_LOG_MAIN, O_RDWR);
     if (fd < 0) {
@@ -49,6 +54,18 @@ int main(int argc, char* argv[]) {
             char* tag = (char*)(entry->msg + 1);
             char* msg = (char*)(tag + strlen(tag) + 1);
             char priority = *(char*)entry->msg;
+
+
+            bool mskip = false;
+            for (int i = 1; i < argc; ++i) {
+                if (!strcmp(tag, argv[i])) {
+                    mskip = true;
+                    break;
+                }
+            }
+            if (mskip) {
+                continue;
+            }
 
             {
                 std::cout<<entry->pid<<" ";

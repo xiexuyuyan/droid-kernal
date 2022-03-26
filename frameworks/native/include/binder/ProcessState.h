@@ -2,6 +2,7 @@
 #define DROID_PROCESS_STATE_H
 
 #include "binder/IBinder.h"
+#include "utils/KeyedVector.h"
 #include "utils/Mutex.h"
 
 #include "utils/String8.h"
@@ -32,6 +33,8 @@ namespace droid {
         void* mVMStart;
 
         mutable Mutex mLock;
+
+        Vector<handle_entry> mHandleToObject;
     };
 
 } // namespace droid

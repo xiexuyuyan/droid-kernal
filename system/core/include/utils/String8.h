@@ -1,3 +1,6 @@
+#ifndef DROID_STRING8_H
+#define DROID_STRING8_H
+
 namespace droid {
     class String8 {
     public:
@@ -17,3 +20,6 @@ namespace droid {
     }
 
 } // namespace droid
+
+
+#endif // DROID_STRING8_H
