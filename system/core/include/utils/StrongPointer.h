@@ -28,8 +28,8 @@ namespace droid {
         inline bool operator != (const void* p) const { return m_ptr != p; }
         inline bool operator == (const void* p) const { return m_ptr == p; }
 
-    private:
         void set_pointer(T* ptr);
+    private:
         T* m_ptr;
     };
 

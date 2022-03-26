@@ -16,6 +16,9 @@ static int logFd[4];
 int __droid_log_buf_write(int bufID, int priority, const char *tag, const char *msg) {
     struct iovec vec[3];
 
+    if (!tag)
+        return 0;
+
     // format ascii int -> char
     priority += '0';
 

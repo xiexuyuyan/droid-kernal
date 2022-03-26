@@ -3,6 +3,10 @@
 
 #include "iostream"
 
+#ifndef TAG
+#define TAG NULL
+#endif
+
 enum LogId{
     LOG_ID_MAIN   = 0,
     LOG_ID_RADIO  = 1,
@@ -38,6 +42,7 @@ int __droid_log_buf_write_f(
 #define LOG_I(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_INFO, (TAG), (MSG))
 #define LOG_D(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_DEBUG, (TAG), (MSG))
 #define LOG_E(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_ERROR, (TAG), (MSG))
+#define LOG_A(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_FATAL, (TAG), (MSG))
 
 #define LOGF_I(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_INFO, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGF_D(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_DEBUG, TAG, FORMAT, ##__VA_ARGS__)

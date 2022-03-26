@@ -1,0 +1,9 @@
+static_cast<char*>((void*)((SharedBuffer*)buf + 1))[0] = 'a';
+static_cast<char*>((void*)((SharedBuffer*)buf + 1))[1] = 'c';
+static_cast<char*>((void*)((SharedBuffer*)buf + 1))[2] = '\0';
+char* a = static_cast<char*>((void*)((SharedBuffer*)buf + 1));
+char b = static_cast<char*>((void*)((SharedBuffer*)buf + 1))[0];
+char* c = &(static_cast<char*>((void*)((SharedBuffer*)buf + 1))[0]);
+LOGF_D(TAG, "getEmptyString: a = %s", a);
+LOGF_D(TAG, "getEmptyString: b = %s", &b);
+LOGF_D(TAG, "getEmptyString: c = %s", c);
