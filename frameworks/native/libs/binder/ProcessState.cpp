@@ -128,9 +128,18 @@ namespace droid {
     }
 
 
-    ProcessState::handle_entry *ProcessState::lookupHandleLocked(int32_t handle) {
+    ProcessState::handle_entry *ProcessState::lookupHandleLocked(
+            int32_t handle) {
         const size_t N = mHandleToObject.size();
         LOGF_D(TAG, "lookupHandleLocked: N = %d", N);
+        if (N <= (size_t)handle) {
+            handle_entry entry;
+            entry.binder = nullptr;
+            entry.refs = nullptr;
+            status_t err = mHandleToObject.insertAt(entry, N, handle + 1 - N);
+            if (err < NO_ERROR)
+                return nullptr;
+        }
         return nullptr;
     }
 

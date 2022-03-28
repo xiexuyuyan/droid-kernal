@@ -15,5 +15,8 @@ namespace droid {
 int main() {
     LOGF_D(TAG, "main: start");
     droid::testEqual();
+
+    LOGF_D(TAG, "main: uint8_t* = %d", sizeof(uint8_t*));
+    LOGF_D(TAG, "main: void* = %d", sizeof(void*));
     LOGF_D(TAG, "main: end\n\n\n");
 }

@@ -3,6 +3,7 @@ project(LightPointerTest)
 add_executable(LightPointerTest LightPointer.cpp)
 add_executable(StrongWeakPointerTest StrongWeakPointer.cpp)
 add_executable(String8Test String8Test.cpp)
+add_executable(VectorTest VectorTest.cpp)
 
 string(REPLACE ${CMAKE_SOURCE_DIR} "" relativePath ${PROJECT_SOURCE_DIR})
 set(EXECUTABLE_OUTPUT_PATH  ${EXECUTABLE_OUTPUT_PATH}${relativePath})
@@ -17,6 +18,10 @@ TARGET_INCLUDE_DIRECTORIES(
 )
 TARGET_INCLUDE_DIRECTORIES(
         String8Test
+        PRIVATE ${CMAKE_SOURCE_DIR}/system/core/include
+)
+TARGET_INCLUDE_DIRECTORIES(
+        VectorTest
         PRIVATE ${CMAKE_SOURCE_DIR}/system/core/include
 )
 
@@ -37,3 +42,4 @@ FIND_LIBRARY(libutils libutils.so ${LIBRARY_OUTPUT_PATH}/system/core/libutils)
 TARGET_LINK_LIBRARIES(LightPointerTest ${liblog} ${libutils})
 TARGET_LINK_LIBRARIES(StrongWeakPointerTest ${liblog} ${libutils})
 TARGET_LINK_LIBRARIES(String8Test ${liblog} ${libutils})
+TARGET_LINK_LIBRARIES(VectorTest ${liblog} ${libutils})
