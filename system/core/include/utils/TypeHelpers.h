@@ -3,6 +3,11 @@
 
 #include <string.h>
 
+#include "log/log.h"
+
+#undef TAG
+#define TAG "TypeHelpers.h"
+
 namespace droid {
 
     template <typename T> struct trait_pointer      { enum { value = false }; };
@@ -22,6 +27,53 @@ namespace droid {
             has_trivial_move = is_pointer || trait_trivial_move<TYPE>::value,
         };
     };
+
+
+#define DROID_TRIVIAL_CTOR_TRAIT( T ) \
+    template<> struct trait_trivial_ctor< T > { enum { value = true }; };
+#define DROID_TRIVIAL_DTOR_TRAIT( T ) \
+    template<> struct trait_trivial_dtor< T > { enum { value = true }; };
+#define DROID_TRIVIAL_COPY_TRAIT( T ) \
+    template<> struct trait_trivial_copy< T > { enum { value = true }; };
+#define DROID_TRIVIAL_MOVE_TRAIT( T ) \
+    template<> struct trait_trivial_move< T > { enum { value = true }; };
+
+
+#define DROID_BASIC_TYPES_TRAITS( T ) \
+    DROID_TRIVIAL_CTOR_TRAIT( T )     \
+    DROID_TRIVIAL_DTOR_TRAIT( T )     \
+    DROID_TRIVIAL_COPY_TRAIT( T )     \
+    DROID_TRIVIAL_MOVE_TRAIT( T )     \
+
+
+    /**
+     * basic types traits
+     * */
+    DROID_BASIC_TYPES_TRAITS( void )
+    DROID_BASIC_TYPES_TRAITS( bool )
+    DROID_BASIC_TYPES_TRAITS( char )
+    DROID_BASIC_TYPES_TRAITS( unsigned char)
+    DROID_BASIC_TYPES_TRAITS( short )
+    DROID_BASIC_TYPES_TRAITS( unsigned short )
+    DROID_BASIC_TYPES_TRAITS( int )
+    DROID_BASIC_TYPES_TRAITS( unsigned int )
+    DROID_BASIC_TYPES_TRAITS( long )
+    DROID_BASIC_TYPES_TRAITS( unsigned long )
+    DROID_BASIC_TYPES_TRAITS( unsigned long long )
+    DROID_BASIC_TYPES_TRAITS( float )
+    DROID_BASIC_TYPES_TRAITS( double )
+
+
+
+    template <typename TYPE> inline
+    void construct_type(TYPE* p, size_t n) {
+        if (!traits<TYPE>::has_trivial_ctor) {
+            while (n > 0) {
+                n--;
+                new(p++) TYPE;
+            }
+        }
+    }
 
     template <typename TYPE> inline
     void destroy_type(TYPE* p, size_t n) {
@@ -51,6 +103,22 @@ namespace droid {
             // todo(20220328-184209 what is n in this case? maybe item nums.)
             new(d) TYPE(*s);
             d++, s++;
+        }
+    }
+
+    template <typename TYPE> inline
+    void splat_type(TYPE* where, const TYPE* what, size_t n) {
+        if (!traits<TYPE>::has_trivial_copy) {
+            while (n > 0) {
+                n--;
+                new(where) TYPE(*what);
+                where++;
+            }
+        } else {
+            while (n > 0) {
+                n--;
+                *where++ = *what;
+            }
         }
     }
 

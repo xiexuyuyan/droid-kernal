@@ -21,9 +21,6 @@ namespace droid {
         , mCount(0)
         , mFlags(flags)
         , mItemSize(itemSize) {
-        LOGF_D(TAG, "VectorImpl: "
-                    "constructor flags = %d, itemSize = %d"
-                    , flags, itemSize);
     }
 
     void *VectorImpl::editArrayImpl() {
@@ -55,20 +52,30 @@ namespace droid {
 
     ssize_t VectorImpl::insertAt(
             const void *item, size_t index, size_t numItems) {
-        LOGF_D(TAG, "insertAt: index = %d, numItems = %d", index, numItems);
         if (index > size()) {
             LOGF_E(TAG, "insertAt: error index = %d", index);
             return BAD_INDEX;
         }
+        int preSize = size();
         void* where = _grow(index, numItems);
         size_t whereTransInIndex =
                 ((uint8_t*)where - (uint8_t*)mStorage) / mItemSize;
-        LOGF_D(TAG, "insertAt: whereTransInIndex = %d"
-               , whereTransInIndex);
+        LOGF_ASSERT(mCount == (preSize + numItems)
+                    , "insertAt:%d: After grow, calc a different size"
+                      ", preSize = %d, add = %d , finally size = %d"
+                      , __LINE__, preSize, numItems, size());
+        LOGF_ASSERT(index == whereTransInIndex
+                    , "insertAt:%d: After grow, calc a different index"
+                      ", we expect = %d, but finally = %d"
+                      , __LINE__, index, whereTransInIndex);
         if (where) {
-
+            if (item) {
+                _do_splat(where, item, numItems);
+            } else {
+                _do_construct(where, numItems);
+            }
         }
-        return 0;
+        return where ? index : (ssize_t) NO_MEMORY;
     }
 
     const void *VectorImpl::itemLocation(size_t index) const {
@@ -82,6 +89,28 @@ namespace droid {
             }
         }
         return nullptr;
+    }
+
+    ssize_t VectorImpl::setCapacity(size_t new_capacity) {
+        if (new_capacity <= size()) {
+            return capacity();
+        }
+
+        size_t new_allocation_size = 0;
+        bool mAssertTrue = !__builtin_mul_overflow(
+                new_capacity, mItemSize, &new_allocation_size);
+        LOGF_ASSERT(mAssertTrue, "setCapacity:%d: Mul failed", __LINE__);
+        SharedBuffer* sb = SharedBuffer::alloc(new_allocation_size);
+        LOGF_ASSERT(sb, "setCapacity:%d: Alloc failed", __LINE__);
+        if (sb) {
+            void* array = sb->data();
+            _do_copy(array, mStorage, size());
+            release_storage();
+            mStorage = const_cast<void*>(array);
+        } else {
+            return NO_MEMORY;
+        }
+        return new_capacity;
     }
 
     void VectorImpl::release_storage() {
@@ -105,9 +134,7 @@ namespace droid {
         mAssertTrue = !__builtin_add_overflow(mCount, amount, &new_size);
         LOGF_ASSERT(mAssertTrue, "_grow:%d: new_size overflow", __LINE__);
 
-        LOGF_D(TAG, "_grow: new_size = %d", new_size);
         if (capacity() < new_size) {
-            LOGF_D(TAG, "_grow: capacity = %d", capacity());
             size_t new_capacity = 0;
 
             mAssertTrue = !__builtin_add_overflow(
@@ -117,14 +144,20 @@ namespace droid {
             // todo(20220328-102048 in android source:
             //  it makes x = (x + (x/2) + 1)         )
             new_capacity = max(kMinVectorCapacity, new_capacity);
-            LOGF_D(TAG, "_grow: new_capacity = %d", new_capacity);
 
             size_t new_alloc_size = 0;
             mAssertTrue = !__builtin_mul_overflow(
                     new_capacity, mItemSize, &new_alloc_size);
-            LOGF_D(TAG, "_grow: new_alloc_size = %d", new_alloc_size);
             LOGF_ASSERT(mAssertTrue, "_grow:%d: new_alloc_size overflow"
                         , __LINE__);
+            /*
+            LOGF_D(TAG
+                   , "_grow: from old (capacity = %d size = %d)"
+                     ", cause insert amount %d"
+                     ", grow to (new_capacity = %d new_size = %d)"
+                     , capacity(), size()
+                     , amount, new_capacity, new_size);
+            */
             if ( (mStorage)
                 && (mCount == where)
                 && (mFlags & HAS_TRIVIAL_COPY)
@@ -194,6 +227,12 @@ namespace droid {
         return mItemSize;
     }
 
+    void VectorImpl::_do_construct(void *storage, size_t num) const {
+        if (!(mFlags & HAS_TRIVIAL_CTOR)) {
+            do_construct(storage, num);
+        }
+    }
+
     void VectorImpl::_do_destroy(void *storage, size_t num) const {
         if (!(mFlags & HAS_TRIVIAL_DTOR)) {
             do_destroy(storage, num);
@@ -208,6 +247,13 @@ namespace droid {
             memcpy(dest, from, num * itemSize());
         }
     }
+
+
+    void VectorImpl::_do_splat(
+            void* dest, const void* from, size_t num) const {
+        do_splat(dest, from, num);
+    }
+
 
     void VectorImpl::_do_move_forward(
             void* dest, const void* from, size_t num) const {

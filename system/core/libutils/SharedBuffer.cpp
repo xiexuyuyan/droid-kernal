@@ -33,7 +33,7 @@ namespace droid {
             SharedBuffer* buf = const_cast<SharedBuffer*>(this);
             if (buf->mSize == newSize) return buf;
             bool mAssertTrue =
-                    (newSize >= (SIZE_MAX - sizeof(SharedBuffer)));
+                    (newSize < (SIZE_MAX - sizeof(SharedBuffer)));
             LOGF_ASSERT(mAssertTrue
                         , "editResize:%d: Invalid buffer size %zu"
                         , __LINE__, newSize);

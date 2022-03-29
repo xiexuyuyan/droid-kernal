@@ -21,15 +21,19 @@ namespace droid {
         Vector();
 
         inline size_t size() const override { return VectorImpl::size(); }
-
+        inline size_t capacity() const { return VectorImpl::capacity(); }
+        inline ssize_t setCapacity(size_t size) { return VectorImpl::setCapacity(size); }
+        inline const TYPE* array() const;
         ssize_t insertAt(const TYPE& prototype_item
                          , size_t index
                          , size_t numItems = 1);
         // todo(20220327-164929 we mark the inline tag at definition but not in assignment, why ?)
 
     protected:
+        virtual void do_construct(void* storage, size_t num) const;
         virtual void do_destroy(void* storage, size_t num) const;
         virtual void do_copy(void* dest, const void* from, size_t num) const;
+        virtual void do_splat(void *dest, const void *from, size_t num) const;
         virtual void do_move_forward(void *dest, const void *from, size_t num) const;
     };
     template<class TYPE> inline
@@ -41,6 +45,11 @@ namespace droid {
         // todo(20220326-171257 handle the traits!!!)
     }
 
+    template<class TYPE>
+    const TYPE *Vector<TYPE>::array() const {
+        return static_cast<const TYPE*>(arrayImpl());
+    }
+
     template<class TYPE> inline
     ssize_t Vector<TYPE>::insertAt(
             const TYPE& item
@@ -48,7 +57,13 @@ namespace droid {
             , size_t numItems) {
         return VectorImpl::insertAt(&item, index, numItems);
     }
-    
+
+    template <class TYPE>
+    UTILS_VECTOR_NO_CFI void Vector<TYPE>::do_construct(
+            void *storage, size_t num) const {
+        construct_type(reinterpret_cast<TYPE*>(storage), num);
+    }
+
     template <class TYPE>
     UTILS_VECTOR_NO_CFI void Vector<TYPE>::do_destroy(
             void *storage, size_t num) const {
@@ -60,6 +75,13 @@ namespace droid {
             void *dest, const void *from, size_t num) const {
         copy_type(reinterpret_cast<TYPE*>(dest)
                   , reinterpret_cast<const TYPE*>(from), num);
+    }
+
+    template <class TYPE>
+    UTILS_VECTOR_NO_CFI void Vector<TYPE>::do_splat(
+            void *dest, const void *from, size_t num) const {
+        splat_type(reinterpret_cast<TYPE*>(dest)
+                , reinterpret_cast<const TYPE*>(from), num);
     }
 
     template <class TYPE>
