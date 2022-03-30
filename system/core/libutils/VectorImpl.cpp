@@ -91,6 +91,24 @@ namespace droid {
         return nullptr;
     }
 
+    void *VectorImpl::editItemLocation(size_t index) {
+        if (mStorage) {
+            const SharedBuffer* sb =
+                    SharedBuffer::bufferFromData(mStorage);
+            SharedBuffer* editable = sb->attemptEdit();
+            if (editable == nullptr) {
+                editable = SharedBuffer::alloc(sb->size());
+                LOGF_ASSERT(editable, "itemEditLocation: ");
+                _do_copy(editable->data(), mStorage, mCount);
+                release_storage();
+                mStorage = editable->data();
+            }
+        }
+        return mStorage;
+    }
+
+
+
     ssize_t VectorImpl::setCapacity(size_t new_capacity) {
         if (new_capacity <= size()) {
             return capacity();

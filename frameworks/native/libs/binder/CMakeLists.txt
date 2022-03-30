@@ -2,11 +2,12 @@ project(libbinder)
 
 set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
 
-add_library(libbinder SHARED Static.cpp IServiceManager.cpp ProcessState.cpp)
+add_library(libbinder SHARED Static.cpp Parcel.cpp BpBinder.cpp IPCThreadState.cpp IServiceManager.cpp ProcessState.cpp)
 set_target_properties(libbinder PROPERTIES OUTPUT_NAME "binder")
 
 target_include_directories(
         libbinder
+        PRIVATE ${PROJECT_SOURCE_DIR}/include
         PRIVATE ${CMAKE_SOURCE_DIR}/system/core/include
         PRIVATE ${CMAKE_SOURCE_DIR}/frameworks/idl/include
 )

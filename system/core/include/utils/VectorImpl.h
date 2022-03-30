@@ -24,6 +24,7 @@ namespace droid {
 
         ssize_t insertAt(const void* item, size_t where, size_t numItems = 1);
         const void* itemLocation(size_t index) const;
+        void* editItemLocation(size_t index);
     protected:
         void release_storage();
         virtual void do_construct(void* storage, size_t num) const = 0;

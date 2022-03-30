@@ -18,5 +18,6 @@ int main() {
 
     sp<IServiceManager> sm = defaultServiceManager();
 
+    LOG_D(TAG, "main: \n\n\n");
     return 0;
 }

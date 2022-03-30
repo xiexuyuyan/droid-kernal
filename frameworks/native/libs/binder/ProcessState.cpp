@@ -15,6 +15,9 @@
 
 #include "utils/Errors.h"
 #include "Static.h"
+#include "binder/Parcel.h"
+#include "binder/IPCThreadState.h"
+#include "binder/BpBinder.h"
 
 #undef TAG
 #define TAG "ProcessState.cpp"
@@ -118,8 +121,9 @@ namespace droid {
         sp<IBinder> context = getStrongProxyForHandle(0);
 
         if (context == nullptr) {
-            LOG_E(TAG, "getContextObject: not able to get context object on ???");
-            // todo(20220325-125839 String8@mDriverName)
+            LOGF_E(TAG
+                   , "getContextObject: Not able to get context object on %s"
+                   , mDriverName.c_str());
         }
 
         // todo(20220325-125920 some...)
@@ -140,7 +144,7 @@ namespace droid {
             if (err < NO_ERROR)
                 return nullptr;
         }
-        return nullptr;
+        return &mHandleToObject.editItemAt(handle);
     }
 
     sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle) {
@@ -150,6 +154,26 @@ namespace droid {
 
         handle_entry* entry = lookupHandleLocked(handle);
 
+        if (entry != nullptr) {
+            IBinder* proxy = entry->binder;
+            if (proxy == nullptr) {
+                // todo(20220329-190755 !entry->refs->attemptIncWeak(this))
+                if (handle == 0) {
+                    LOG_D(TAG, "getStrongProxyForHandle: end at here");
+                    Parcel data;
+                    status_t status = IPCThreadState::self()->transact(
+                            0, IBinder::PING_TRANSACTION
+                            , data, nullptr, 0);
+                    if (status == DEAD_OBJECT)
+                        return nullptr;
+                }
+                proxy = BpBinder::create(handle);
+                entry->binder = proxy;
+                if (proxy)
+                    entry->refs = proxy->getWeakRefs();
+                result = proxy;
+            }
+        }
 
         return result;
     }

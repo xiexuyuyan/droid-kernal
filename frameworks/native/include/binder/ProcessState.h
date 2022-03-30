@@ -16,6 +16,7 @@ namespace droid {
         sp<IBinder> getStrongProxyForHandle(int32_t handle);
 
     private:
+        friend class IPCThreadState;
         explicit ProcessState(const char* driver);
         ~ProcessState() override;
 

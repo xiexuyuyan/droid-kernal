@@ -24,6 +24,7 @@ namespace droid {
         inline size_t capacity() const { return VectorImpl::capacity(); }
         inline ssize_t setCapacity(size_t size) { return VectorImpl::setCapacity(size); }
         inline const TYPE* array() const;
+        TYPE& editItemAt(size_t index);
         ssize_t insertAt(const TYPE& prototype_item
                          , size_t index
                          , size_t numItems = 1);
@@ -48,6 +49,11 @@ namespace droid {
     template<class TYPE>
     const TYPE *Vector<TYPE>::array() const {
         return static_cast<const TYPE*>(arrayImpl());
+    }
+
+    template<class TYPE>
+    TYPE &Vector<TYPE>::editItemAt(size_t index) {
+        return *( static_cast<TYPE*>(editItemLocation(index)) );
     }
 
     template<class TYPE> inline

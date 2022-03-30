@@ -42,12 +42,14 @@ int __droid_log_buf_write_f(
 #define LOG_V(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_VERBOSE, (TAG), (MSG))
 #define LOG_D(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_DEBUG, (TAG), (MSG))
 #define LOG_I(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_INFO, (TAG), (MSG))
+#define LOG_W(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_WARN, (TAG), (MSG))
 #define LOG_E(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_ERROR, (TAG), (MSG))
 #define LOG_A(TAG, MSG) __droid_log_buf_write(LOG_ID_MAIN, DROID_LOG_FATAL, (TAG), (MSG))
 
 #define LOGF_V(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_VERBOSE, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGF_D(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_DEBUG, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGF_I(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_INFO, TAG, FORMAT, ##__VA_ARGS__)
+#define LOGF_W(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_WARN, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGF_E(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_ERROR, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGF_A(TAG, FORMAT, ...) __droid_log_buf_write_f(LOG_ID_MAIN, DROID_LOG_FATAL, TAG, FORMAT, ##__VA_ARGS__)
 
