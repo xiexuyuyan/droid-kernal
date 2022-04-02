@@ -22,6 +22,7 @@ namespace droid {
                inline       size_t        size() const;
         static inline       SharedBuffer* bufferFromData(void *data);
         static inline const SharedBuffer* bufferFromData(const void *data);
+        static inline       size_t        sizeFromData(const void *data);
                             SharedBuffer* editResize(size_t size) const;
                             SharedBuffer* attemptEdit() const;
                             int32_t       release(uint32_t flags = 0) const;
@@ -50,6 +51,10 @@ namespace droid {
     const SharedBuffer *SharedBuffer::bufferFromData(const void *data) {
         return data
             ? static_cast<const SharedBuffer*>(data) - 1 : nullptr;
+    }
+
+    size_t SharedBuffer::sizeFromData(const void *data) {
+        return data ? bufferFromData(data)->mSize : 0;
     }
 
     bool SharedBuffer::onlyOwner() const {

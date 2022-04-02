@@ -1,5 +1,7 @@
 project(libutils)
 
+set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+
 # add include directories to build
 include_directories(BEFORE "include")
 

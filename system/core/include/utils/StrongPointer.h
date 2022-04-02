@@ -14,8 +14,8 @@ namespace droid {
         inline sp() : m_ptr(nullptr) {}
 
         sp(T* other);
-
         sp(const sp<T>& other);
+        template<typename U> sp(const sp<U>& other);
 
         ~sp();
 
@@ -28,8 +28,10 @@ namespace droid {
         inline bool operator != (const void* p) const { return m_ptr != p; }
         inline bool operator == (const void* p) const { return m_ptr == p; }
 
-        void set_pointer(T* ptr);
     private:
+        template<typename Y> friend class sp;
+        template<typename Y> friend class wp;
+        void set_pointer(T* ptr);
         T* m_ptr;
     };
 
@@ -43,6 +45,12 @@ namespace droid {
     template<typename T>
     sp<T>::sp(const sp<T>& other): m_ptr(other.m_ptr) {
         LOG_V(TAG, "sp(sp<T>&): ");
+        if (m_ptr)
+            m_ptr->incStrong(this);
+    }
+
+    template<typename T> template<typename U>
+    sp<T>::sp(const sp<U>& other) : m_ptr(other.m_ptr) {
         if (m_ptr)
             m_ptr->incStrong(this);
     }

@@ -11,31 +11,42 @@ namespace droid {
 
     class ProcessState: public virtual RefBase {
     public:
-        static sp<ProcessState> self();
-        sp<IBinder> getContextObject(const sp<IBinder>& caller);
-        sp<IBinder> getStrongProxyForHandle(int32_t handle);
+        static  sp<ProcessState>     self();
+        static  sp<ProcessState>     initWithDriver(const char* driver);
+                sp<IBinder>          getContextObject(const sp<IBinder>& caller);
+                sp<IBinder>          getStrongProxyForHandle(int32_t handle);
+                status_t             setThreadPoolMaxThreadCount(size_t maxThreads);
+                String8              getDriverName();
+                enum class CallRestriction {
+                    NONE,
+                    ERROR_IF_NOT_ONEWAY,
+                    FATAL_IF_NOT_ONEWAY
+                };
+                void                setCallRestriction(CallRestriction restriction);
 
     private:
         friend class IPCThreadState;
-        explicit ProcessState(const char* driver);
-        ~ProcessState() override;
+        explicit                     ProcessState(const char* driver);
+                                     ~ProcessState() override;
 
-        ProcessState& operator=(const ProcessState& o);
+                ProcessState&        operator=(const ProcessState& o);
 
-        struct handle_entry {
-            IBinder* binder;
-            RefBase::weakref_type* refs;
-        };
+                struct handle_entry {
+                    IBinder* binder;
+                    RefBase::weakref_type* refs;
+                };
 
-        handle_entry* lookupHandleLocked(int32_t handle);
+                handle_entry*        lookupHandleLocked(int32_t handle);
 
-        String8 mDriverName;
-        int mDriverFD;
-        void* mVMStart;
+                String8              mDriverName;
+                int                  mDriverFD;
+                void*                mVMStart;
+                size_t               mMaxThreads;
 
-        mutable Mutex mLock;
+        mutable Mutex                mLock;
 
-        Vector<handle_entry> mHandleToObject;
+                Vector<handle_entry> mHandleToObject;
+                CallRestriction      mCallRestriction;
     };
 
 } // namespace droid

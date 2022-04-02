@@ -8,8 +8,9 @@
 namespace droid {
     class IPCThreadState {
     public:
-               void             flushCommands();
         static IPCThreadState*  self();
+        static IPCThreadState*  selfOrNull();
+               void             flushCommands();
                status_t         transact(int32_t handle
                                          , uint32_t code
                                          , const Parcel& data

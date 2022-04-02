@@ -3,4 +3,11 @@
 
 #include "binder/IBinder.h"
 
+namespace droid {
+    class BBinder : public IBinder {
+    public:
+        BBinder();
+    };
+}
+
 #endif // DROID_BINDER_H

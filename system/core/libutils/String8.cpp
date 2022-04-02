@@ -41,10 +41,65 @@ namespace droid {
         return getEmptyString();
     }
 
+
+    String8::String8() : mString(getEmptyString()){
+
+    }
+
     String8::String8(const char *o)
         : mString(allocFromUTF8(o, strlen(o))) {
         if (mString == nullptr) {
             mString = getEmptyString();
         }
+    }
+
+    size_t String8::length() const {
+        // todo(20220402-112642 why it sub 1)
+        // Q: when we do @real_append, we auto append '\0' in the end
+        return SharedBuffer::sizeFromData(mString) - 1;
+    }
+
+    status_t String8::setTo(const char *other, size_t len) {
+        const char* newString = allocFromUTF8(other, len);
+        SharedBuffer::bufferFromData(mString)->release();
+        mString = newString;
+        LOG_ASSERT(mString);
+        if (mString)
+            return OK;
+
+        mString = getEmptyString();
+        return NO_MEMORY;
+    }
+
+    status_t String8::append(const char *other) {
+        return append(other, strlen(other));
+    }
+
+    status_t String8::append(const char *other, size_t otherLen) {
+        if (bytes() == 0) {
+            return setTo(other, otherLen);
+        } else if (otherLen == 0) {
+            return OK;
+        }
+
+        return real_append(other, otherLen);
+    }
+
+
+    status_t String8::real_append(const char *other, size_t otherLen) {
+        const size_t myLen = bytes();
+        SharedBuffer* buf=
+                SharedBuffer::bufferFromData(
+                        mString)->editResize(otherLen + myLen + 1);
+        if (buf) {
+            char* str = (char*)buf->data();
+            mString = str;
+            str += myLen;
+            memcpy(str, other, otherLen);
+            str[otherLen] = '\0';
+            return OK;
+        }
+
+        return NO_MEMORY;
     }
 }

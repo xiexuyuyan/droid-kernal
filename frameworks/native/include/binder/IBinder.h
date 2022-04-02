@@ -18,6 +18,11 @@ namespace droid {
         enum {
             PING_TRANSACTION = B_PACK_CHARS('_', 'P', 'N', 'G'),
         };
+        IBinder();
+
+        class DeathRecipient : public virtual RefBase {
+
+        };
     };
 
 } // namespace droid

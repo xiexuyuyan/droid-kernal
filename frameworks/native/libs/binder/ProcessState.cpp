@@ -29,23 +29,78 @@ const char* defaultDriver = "/dev/binder";
 
 namespace droid {
     sp<ProcessState> ProcessState::self() {
-        LOG_D(TAG, "self: ");
         Mutex::Autolock _l(gProcessMutex);
-        if (gProgress != nullptr) {
-            return gProgress;
+        if (gProcess != nullptr) {
+            return gProcess;
         }
-        gProgress = new ProcessState(defaultDriver);
-        return gProgress;
+        gProcess = new ProcessState(defaultDriver);
+        return gProcess;
+    }
+    sp<ProcessState> ProcessState::initWithDriver(const char *driver) {
+        Mutex::Autolock _l(&gProcessMutex);
+        if (gProcess != nullptr) {
+            if (!strcmp(gProcess->getDriverName().c_str(), driver)) {
+                return gProcess;
+            }
+            LOG_W(TAG, "initWithDriver: "
+                       "ProcessSate was already initialized");
+        }
+
+        // todo(20220331-105620 permission!)
+        if (access(driver, R_OK) == -1) {
+            LOGF_E(TAG, "initWithDriver: Binder driver %s is unavailable."
+                        " Using /dev/binder instead", driver);
+            driver = "/dev/binder";
+        }
+
+        gProcess = new ProcessState(driver);
+
+        return gProcess;
     }
 
-    ProcessState::~ProcessState() {
-        LOG_D(TAG, "~ProcessState(): destructor");
-        LOG_D(TAG, ("~ProcessState: mDriverFd = "
-                + std::to_string(mDriverFD)).c_str());
-        if (mDriverFD > 0) {
-            close(mDriverFD);
+    sp<IBinder> ProcessState::getContextObject(const sp<IBinder> &caller) {
+        // todo(20220325-095602 getStrongProxyForHandle(0))
+        sp<IBinder> context = getStrongProxyForHandle(0);
+
+        if (context == nullptr) {
+            LOGF_E(TAG
+            , "getContextObject: Not able to get context object on %s"
+            , mDriverName.c_str());
         }
-        mDriverFD = -1;
+
+        // todo(20220325-125920 some...)
+
+        return context;
+    }
+
+    status_t ProcessState::setThreadPoolMaxThreadCount(size_t maxThreads) {
+        status_t result = NO_ERROR;
+
+        if (ioctl(mDriverFD
+                  , BINDER_SET_MAX_THREADS, &maxThreads) != -1) {
+            // todo(20220331-112620 impl ioctl)
+            mMaxThreads = maxThreads;
+        } else {
+            result = -errno;
+            LOGF_E(TAG, "setThreadPoolMaxThreadCount: "
+                       "Binder ioctl to set max threads failed: %s"
+                       , strerror(errno));
+        }
+
+        return result;
+    }
+
+    void ProcessState::setCallRestriction(
+            ProcessState::CallRestriction restriction) {
+        LOGF_ASSERT(IPCThreadState::selfOrNull() == nullptr
+                    , "setCallRestriction: "
+                      "Call restriction must set before the threadpool "
+                      "is started");
+        mCallRestriction = restriction;
+    }
+
+    String8 ProcessState::getDriverName() {
+        return mDriverName;
     }
 
     static int open_driver(const char* driver) {
@@ -95,7 +150,9 @@ namespace droid {
     ProcessState::ProcessState(const char *driver) :
                 mDriverName(driver)
                 , mDriverFD(open_driver(driver))
-                , mVMStart(MAP_FAILED){
+                , mVMStart(MAP_FAILED)
+                , mMaxThreads(DEFAULT_MAX_BINDER_THREADS)
+                , mCallRestriction(CallRestriction::NONE) {
         LOGF_V(TAG, "ProcessState: constructor with driver: '%s', fd: %d"
                , mDriverName.c_str(), mDriverFD);
         if (mDriverFD >= 0) {
@@ -116,19 +173,14 @@ namespace droid {
         }
     }
 
-    sp<IBinder> ProcessState::getContextObject(const sp<IBinder> &caller) {
-        // todo(20220325-095602 getStrongProxyForHandle(0))
-        sp<IBinder> context = getStrongProxyForHandle(0);
-
-        if (context == nullptr) {
-            LOGF_E(TAG
-                   , "getContextObject: Not able to get context object on %s"
-                   , mDriverName.c_str());
+    ProcessState::~ProcessState() {
+        LOG_D(TAG, "~ProcessState(): destructor");
+        LOG_D(TAG, ("~ProcessState: mDriverFd = "
+                    + std::to_string(mDriverFD)).c_str());
+        if (mDriverFD > 0) {
+            close(mDriverFD);
         }
-
-        // todo(20220325-125920 some...)
-
-        return context;
+        mDriverFD = -1;
     }
 
 

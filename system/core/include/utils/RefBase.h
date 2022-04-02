@@ -109,6 +109,8 @@ namespace droid {
         // promotion to sp
         droid::sp<T> promote() const;
     private:
+        template<typename Y> friend class sp;
+        template<typename Y> friend class wp;
         T* m_ptr;
         weakref_type* m_refs;
     };

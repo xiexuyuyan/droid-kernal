@@ -3,5 +3,5 @@
 namespace droid {
     // ProcessState.cpp
     Mutex& gProcessMutex = *new Mutex;
-    sp<ProcessState> gProgress;
+    sp<ProcessState> gProcess;
 } // namespace droid

@@ -33,6 +33,8 @@ add_subdirectory(frameworks/av/media/mediaserver)
 
 add_subdirectory(frameworks/native)
 
+add_subdirectory(frameworks/idl)
+
 
 
 add_subdirectory(test/common/drivers/staging/log)

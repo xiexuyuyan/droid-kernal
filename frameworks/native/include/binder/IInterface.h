@@ -13,6 +13,11 @@ namespace droid {
     inline sp<INTERFACE> interface_cast(const sp<IBinder>& obj) {
         return INTERFACE::asInterface(obj);
     }
+
+    template<typename INTERFACE>
+    class BnInterface : public INTERFACE, public BBinder {
+
+    };
 } // namespace droid
 
 #endif // DROID_IINTERFACE_H

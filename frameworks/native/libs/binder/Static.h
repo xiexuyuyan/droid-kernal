@@ -2,5 +2,5 @@
 
 namespace droid {
     extern Mutex& gProcessMutex;
-    extern sp<ProcessState> gProgress;
+    extern sp<ProcessState> gProcess;
 }

@@ -50,6 +50,16 @@ restart:
         goto restart;
     }
 
+    IPCThreadState *IPCThreadState::selfOrNull() {
+        if (gHaveTLS.load(std::memory_order_acquire)) {
+            const pthread_key_t key = gTLS;
+            IPCThreadState* state =
+                    (IPCThreadState*) pthread_getspecific(key);
+            return state;
+        }
+        return nullptr;
+    }
+
 
     void IPCThreadState::clearCaller() {
         mCallingPid = getpid();

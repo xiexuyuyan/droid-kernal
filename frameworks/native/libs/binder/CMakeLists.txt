@@ -1,8 +1,16 @@
 project(libbinder)
 
-set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
-add_library(libbinder SHARED Static.cpp Parcel.cpp BpBinder.cpp IPCThreadState.cpp IServiceManager.cpp ProcessState.cpp)
+add_library(libbinder SHARED
+        Static.cpp
+        Parcel.cpp
+        Status.cpp
+        Binder.cpp
+        BpBinder.cpp
+        IPCThreadState.cpp
+        IServiceManager.cpp
+        ProcessState.cpp)
 set_target_properties(libbinder PROPERTIES OUTPUT_NAME "binder")
 
 target_include_directories(

@@ -4,3 +4,4 @@ project(frameworks-native)
 include_directories(AFTER "include")
 
 add_subdirectory(libs/binder)
+add_subdirectory(cmds/servicemanager)

@@ -7,3 +7,6 @@ char* c = &(static_cast<char*>((void*)((SharedBuffer*)buf + 1))[0]);
 LOGF_D(TAG, "getEmptyString: a = %s", a);
 LOGF_D(TAG, "getEmptyString: b = %s", &b);
 LOGF_D(TAG, "getEmptyString: c = %s", c);
+
+set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
