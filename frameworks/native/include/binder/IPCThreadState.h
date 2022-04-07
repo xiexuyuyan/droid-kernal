@@ -16,6 +16,7 @@ namespace droid {
                                          , const Parcel& data
                                          , Parcel* reply
                                          , uint32_t flags);
+               void             setTheContextObject(sp<BBinder> obj);
 
     private:
                                 IPCThreadState();

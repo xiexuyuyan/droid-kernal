@@ -13,6 +13,20 @@ namespace droid {
             return {};
         }
 
+        Status Status::fromExceptionCode(int32_t exceptionCode) {
+            if (exceptionCode == EX_TRANSACTION_FAILED) {
+                return {exceptionCode, FAILED_TRANSACTION};
+            }
+
+            return {exceptionCode, OK};
+        }
+
+
+        Status::Status(int32_t exceptionCode
+                       , int32_t errorCode)
+                       : mException(exceptionCode)
+                       , mErrorCode(errorCode){}
+
         String8 Status::toString8() const {
             String8 ret;
             if (mException == EX_NONE) {

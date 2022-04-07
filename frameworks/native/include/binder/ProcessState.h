@@ -14,6 +14,14 @@ namespace droid {
         static  sp<ProcessState>     self();
         static  sp<ProcessState>     initWithDriver(const char* driver);
                 sp<IBinder>          getContextObject(const sp<IBinder>& caller);
+        typedef bool                 (*context_check_func)(
+                                                    const String8& name
+                                                    // todo(20220407-143308 String16)
+                                                    , const sp<IBinder>& caller
+                                                    , void* userData);
+                bool                 becomeContextManager(
+                                                    context_check_func checkFunc
+                                                    , void* userData);
                 sp<IBinder>          getStrongProxyForHandle(int32_t handle);
                 status_t             setThreadPoolMaxThreadCount(size_t maxThreads);
                 String8              getDriverName();

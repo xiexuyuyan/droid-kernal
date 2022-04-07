@@ -1,5 +1,7 @@
 project(servicemanager)
 
+set(CMAKE_CXX_STANDARD 14)
+
 add_executable(ServiceManager main.cpp ServiceManager.cpp ServiceManager.h)
 
 TARGET_INCLUDE_DIRECTORIES(

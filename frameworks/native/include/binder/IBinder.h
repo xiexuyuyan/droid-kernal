@@ -12,6 +12,9 @@
 
 namespace droid {
 
+    class BBinder;
+    class BpBinder;
+
     class [[clang::lto_visibility_public]] IBinder
             : public virtual RefBase {
     public:
@@ -23,6 +26,9 @@ namespace droid {
         class DeathRecipient : public virtual RefBase {
 
         };
+
+        virtual BBinder* localBinder();
+        virtual BpBinder* remoteBinder();
     };
 
 } // namespace droid

@@ -17,12 +17,18 @@ namespace droid {
 
             enum Exception {
                 EX_NONE = 0,
+                EX_ILLEGAL_ARGUMENT = -3,
+
+                EX_TRANSACTION_FAILED = -129,
             };
             static Status  ok();
+            static Status  fromExceptionCode(int32_t exceptionCode);
                    bool    isOk() const { return mException == EX_NONE; }
                    String8 toString8() const;
         private:
+            Status(int32_t exceptionCode, int32_t errorCode);
             int32_t mException = EX_NONE;
+            int32_t mErrorCode = 0;
         };
 
 

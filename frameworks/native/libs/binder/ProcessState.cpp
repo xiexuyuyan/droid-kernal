@@ -73,6 +73,13 @@ namespace droid {
         return context;
     }
 
+    bool ProcessState::becomeContextManager(
+            context_check_func checkFunc, void *userData) {
+        LOG_D(TAG, "becomeContextManager: todo");
+        // todo(20220407-143512 become context manager)
+        return false;
+    }
+
     status_t ProcessState::setThreadPoolMaxThreadCount(size_t maxThreads) {
         status_t result = NO_ERROR;
 

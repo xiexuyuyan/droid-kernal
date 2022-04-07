@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/android/binder.h>
+#include <binder/Binder.h>
 
 #include "log/log.h"
 
@@ -107,5 +108,12 @@ restart:
             }
             delete self;
         }
+    }
+
+    sp<BBinder> the_context_object;
+
+    void IPCThreadState::setTheContextObject(sp<BBinder> obj) {
+        the_context_object = obj;
+        LOG_D(TAG, "setTheContextObject: ");
     }
 }
