@@ -1,8 +1,13 @@
 #include "utils/String8.h"
 
+#include "log/log.h"
 #include <cstring>
+#include "utils/String16.h"
 
 #include "SharedBuffer.h"
+
+#undef TAG
+#define TAG "String8.cpp"
 
 namespace droid {
 
@@ -41,6 +46,27 @@ namespace droid {
         return getEmptyString();
     }
 
+    static char* allocFromUTF16(const char16_t* in, size_t len) {
+        if (len == 0) {
+            return getEmptyString();
+        }
+
+        const ssize_t resultStrLen = utf16_to_utf8_length(in, len) + 1;
+        if (resultStrLen < 1) {
+            return getEmptyString();
+        }
+
+        SharedBuffer* buf = SharedBuffer::alloc(resultStrLen);
+        LOGF_ASSERT(buf, "allocFromUTF16: Unable to allocate shared buf");
+        if (!buf) {
+            return getEmptyString();
+        }
+
+        char* resultStr = (char*)buf->data();
+        utf16_to_utf8(in, len, resultStr, resultStrLen);
+        return resultStr;
+    }
+
 
     String8::String8() : mString(getEmptyString()){
 
@@ -51,6 +77,11 @@ namespace droid {
         if (mString == nullptr) {
             mString = getEmptyString();
         }
+    }
+
+
+    String8::String8(const String16& o)
+        : mString(allocFromUTF16(o.string(), o.size())) {
     }
 
     size_t String8::length() const {

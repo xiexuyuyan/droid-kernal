@@ -2,6 +2,7 @@
 #include "log/log.h"
 #include "binder/IBinder.h"
 #include "binder/BpBinder.h"
+#include "binder/IInterface.h"
 
 
 #undef TAG
@@ -11,6 +12,17 @@ namespace droid {
     IBinder::IBinder() : RefBase() {
         LOG_D(TAG, "IBinder: constructor");
     }
+
+    sp<IInterface> IBinder::queryLocalInterface(
+            const String16& _d/*descriptor*/) {
+        char d[_d.size()];
+        utf16_to_utf8(_d.string(), _d.size()
+                      , d, _d.size());
+        LOGF_D(TAG, "queryLocalInterface: descriptor = %s"
+               , d);
+        return nullptr;
+    }
+
 
     BBinder* IBinder::localBinder() {
         return nullptr;
@@ -23,5 +35,15 @@ namespace droid {
 
     BBinder::BBinder() {
         LOG_D(TAG, "BBinder: constructor");
+    }
+
+    BpRefBase::BpRefBase(const sp<IBinder>& o)
+        : mRemote(o.get()), mRefs(nullptr), mState(0){
+        extendObjectLifetime(OBJECT_LIFETIME_WEAK);
+        LOGF_ASSERT(mRemote != nullptr, "BpRefBase: constructor");
+        if (mRemote) {
+            mRemote->incStrong(this);
+            mRefs = mRemote->creatWeak(this);
+        }
     }
 } // namespace droid

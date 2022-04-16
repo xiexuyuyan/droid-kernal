@@ -3,11 +3,13 @@
 
 #include "binder/IInterface.h"
 #include "binder/Status.h"
+#include "utils/String16.h"
 
 namespace droid {
     namespace os {
         class IServiceManager : public ::droid::IInterface {
         public:
+        DECLARE_META_INTERFACE(ServiceManager)
             enum : int32_t {
                 DUMP_FLAG_PRIORITY_DEFAULT = 8,
             };

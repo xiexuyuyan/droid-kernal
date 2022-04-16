@@ -1,5 +1,7 @@
 project(libidlbinder)
 
+set(CMAKE_CXX_STANDARD 17)
+
 add_library(libidlbinder SHARED droid/os/IServiceManager.cpp)
 
 target_include_directories(

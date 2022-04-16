@@ -24,6 +24,7 @@ namespace droid {
             static Status  ok();
             static Status  fromExceptionCode(int32_t exceptionCode);
                    bool    isOk() const { return mException == EX_NONE; }
+                   int32_t exceptionCode() { return mException; };
                    String8 toString8() const;
         private:
             Status(int32_t exceptionCode, int32_t errorCode);

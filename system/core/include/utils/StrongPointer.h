@@ -20,6 +20,7 @@ namespace droid {
         ~sp();
 
         sp& operator = (T* other);
+        sp& operator = (const sp<T>& other);
 
         // accessors
         inline T* operator-> () const { return m_ptr; }
@@ -80,6 +81,20 @@ namespace droid {
             // todo(why? this appears in android source)
             ;
         m_ptr = other;
+        return *this;
+    }
+
+    template<typename T>
+    sp<T>& sp<T>::operator = (const sp<T>& other) {
+        LOG_D(TAG, "operator=: ????????????");
+        T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
+        T* otherPtr(other.m_ptr);
+        if (otherPtr) otherPtr->incStrong(this);
+        if (oldPtr) oldPtr->decStrong(this);
+        if (oldPtr != *const_cast<T* volatile*>(&m_ptr))
+            // todo(20220416-111721 why? this appears in android source)
+            ;
+        m_ptr = otherPtr;
         return *this;
     }
 } // namespace droid

@@ -215,8 +215,8 @@ namespace droid {
 
         if (entry != nullptr) {
             IBinder* proxy = entry->binder;
-            if (proxy == nullptr) {
-                // todo(20220329-190755 !entry->refs->attemptIncWeak(this))
+            if (proxy == nullptr
+                || !entry->refs->attemptIncWeak(this)) {
                 if (handle == 0) {
                     LOG_D(TAG, "getStrongProxyForHandle: end at here");
                     Parcel data;
@@ -231,6 +231,9 @@ namespace droid {
                 if (proxy)
                     entry->refs = proxy->getWeakRefs();
                 result = proxy;
+            } else {
+                LOG_E(TAG, "getStrongProxyForHandle: !!!add refs");
+                // todo(20220416-144402 add refs)
             }
         }
 

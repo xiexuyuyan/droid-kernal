@@ -10,3 +10,19 @@ LOGF_D(TAG, "getEmptyString: c = %s", c);
 
 set(CMAKE_CXX_COMPILER  "/usr/bin/clang++" )
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
+
+
+    auto fa = makeStaticData<1>;// 8
+    auto fd = makeStaticData<4>;// 8
+    auto fe = makeStaticData<5>;// 12
+    auto ff = makeStaticData<6>;// 12
+
+    printf("fa = %x\n", fa);
+
+    auto aaa = (long long)fa;
+    auto bbb = (long long)fb;
+    printf("fb - fa = %d\n", (bbb - aaa));
+
+    // printf("sizeof(StaticData<6>) = %d\n", sizeof(StaticData<4>));
+

@@ -30,9 +30,14 @@ namespace droid {
     private:
         mutable std::atomic<int32_t>      mRefs;
                             size_t        mSize;
+                            uint32_t      mReserved;
     public:
-                            uint32_t      mClientMetaData;
+                            uint32_t      mClientMetadata;
     };
+
+    static_assert(sizeof(SharedBuffer) % 8 == 0
+        && (sizeof(size_t) > 4 || sizeof(SharedBuffer) == 16)
+        , "SharedBuffer has unexpected size");
 
     const void* SharedBuffer::data() const {
         return this + 1;

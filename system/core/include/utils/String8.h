@@ -4,10 +4,14 @@
 #include "utils/Errors.h"
 
 namespace droid {
+    class String16;
+
     class String8 {
     public:
-                 String8();
-        explicit String8(const char* o);
+                               String8();
+        explicit               String8(const char* o);
+
+        explicit               String8(const String16& o);
 
         inline const char*     c_str() const;
         inline const char*     string() const;

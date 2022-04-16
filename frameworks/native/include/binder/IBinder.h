@@ -2,6 +2,9 @@
 #define DROID_IBINDER_H
 
 #include "utils/RefBase.h"
+#include "utils/String16.h"
+#include "utils/Errors.h"
+#include "binder/Parcel.h"
 
 // in android, saying that linux/binder.h defines this
 // , but it doesn't want to export kernel headers
@@ -14,6 +17,7 @@ namespace droid {
 
     class BBinder;
     class BpBinder;
+    class IInterface;
 
     class [[clang::lto_visibility_public]] IBinder
             : public virtual RefBase {
@@ -22,6 +26,14 @@ namespace droid {
             PING_TRANSACTION = B_PACK_CHARS('_', 'P', 'N', 'G'),
         };
         IBinder();
+
+        virtual sp<IInterface> queryLocalInterface(
+                const droid::String16& descriptor);
+
+        virtual status_t       transact(uint32_t code
+                                        , const Parcel& data
+                                        , Parcel* reply
+                                        , uint32_t flags = 0) = 0;
 
         class DeathRecipient : public virtual RefBase {
 

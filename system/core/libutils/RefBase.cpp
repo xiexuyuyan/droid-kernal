@@ -229,6 +229,29 @@ bool droid::RefBase::weakref_type::attemptIncStrong(const void *id) {
     return true;
 }
 
+bool droid::RefBase::weakref_type::attemptIncWeak(const void *id) {
+    weakref_impl* const impl = static_cast<weakref_impl*>(this);
+
+    int32_t curCount = impl->mWeak.load(std::memory_order_relaxed);
+    LOGF_ASSERT(curCount > 0
+                , "attemptIncWeak: called on %p after underflow"
+                , this);
+    while (curCount > 0) {
+        if (impl->mWeak.compare_exchange_weak(
+                curCount, curCount+1, std::memory_order_relaxed)) {
+            break;
+        }
+        // curCount has been updated
+    }
+
+    if (curCount > 0) {
+        impl->addWeakRef(id);
+    }
+
+    return curCount > 0;
+}
+
+
 int32_t droid::RefBase::weakref_type::getWeakCount() const {
     const weakref_impl* const impl = static_cast<const weakref_impl*>(this);
     return impl->mWeak.load(std::memory_order_relaxed);

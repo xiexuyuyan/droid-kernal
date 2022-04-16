@@ -27,6 +27,7 @@ namespace droid {
 
             // acquire a strong reference if there is already one
             bool attemptIncStrong(const void* id);
+            bool attemptIncWeak(const void* id);
 
             // debug only
             int32_t getWeakCount() const;

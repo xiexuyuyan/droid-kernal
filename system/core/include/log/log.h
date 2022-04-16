@@ -57,13 +57,13 @@ int __droid_log_buf_write_f(
 #define LOG_ASSERT(condition) \
     (!(condition)) ?          \
         ((void)LOG_A(TAG \
-                    , ("Assert failed [" #condition "]!"))) \
+                    , ("Assert failed [" #condition "]"))) \
         : ((void)0)
 
 #define LOGF_ASSERT(condition, FORMAT, ...) \
     (!(condition)) ?                        \
         ((void)LOGF_A(TAG       \
-                    , "Assert failed [" #condition "]! " FORMAT \
+                    , "Assert failed [" #condition "] " FORMAT \
                     , ##__VA_ARGS__))       \
         : ((void)0)
 

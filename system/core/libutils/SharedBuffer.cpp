@@ -19,7 +19,8 @@ namespace droid {
         if (sb) {
             sb->mRefs.store(1, std::memory_order_relaxed);
             sb->mSize = size;
-            sb->mClientMetaData = 0;
+            sb->mReserved = 0;
+            sb->mClientMetadata = 0;
         }
         return sb;
     }
