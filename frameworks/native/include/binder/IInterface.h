@@ -66,7 +66,7 @@ public:                                                     \
             const String16& _descriptor) {
         LOGF_D("TAG", "queryLocalInterface: %s", _descriptor.string());
         if (_descriptor == INTERFACE::descriptor)
-            // todo(20220414-191247 override ==)
+            // todo(20220416-171026 Bp{} will not come here, we should confirm it by Bn{} implementation)
             return this;
         return nullptr;
     }

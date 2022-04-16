@@ -56,8 +56,9 @@ namespace droid {
             // todo(20220416-114012 while (sm == nullptr))
             sp<IBinder> proxy =
                     ProcessState::self()->getContextObject(nullptr);
-            // todo(20220326-130700 test get then test cast)
+            LOG_ASSERT(proxy != nullptr);
             impl = interface_cast<IdlServiceManager>(proxy);
+            LOG_ASSERT(impl != nullptr);
             gDefaultServiceManager = new ServiceManagerShim(impl);
         });
 

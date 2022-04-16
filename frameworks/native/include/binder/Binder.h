@@ -6,7 +6,13 @@
 namespace droid {
     class BBinder : public IBinder {
     public:
-        BBinder();
+                               BBinder();
+
+        virtual status_t       transact(
+                                    uint32_t code
+                                    , const Parcel &data
+                                    , Parcel *reply
+                                    , uint32_t flags) final;
     };
 
     class BpRefBase : public virtual RefBase {

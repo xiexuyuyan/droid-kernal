@@ -37,6 +37,15 @@ namespace droid {
         LOG_D(TAG, "BBinder: constructor");
     }
 
+    status_t BBinder::transact(
+            uint32_t code
+            , const Parcel &data
+            , Parcel *reply
+            , uint32_t flags) {
+        // todo(20220416-161905 no lint next line)
+        return NO_ERROR;
+    }
+
     BpRefBase::BpRefBase(const sp<IBinder>& o)
         : mRemote(o.get()), mRefs(nullptr), mState(0){
         extendObjectLifetime(OBJECT_LIFETIME_WEAK);

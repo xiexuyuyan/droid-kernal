@@ -59,7 +59,6 @@ namespace droid {
     }
 
     sp<IBinder> ProcessState::getContextObject(const sp<IBinder> &caller) {
-        // todo(20220325-095602 getStrongProxyForHandle(0))
         sp<IBinder> context = getStrongProxyForHandle(0);
 
         if (context == nullptr) {
