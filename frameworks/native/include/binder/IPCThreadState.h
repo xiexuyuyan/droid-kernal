@@ -21,9 +21,24 @@ namespace droid {
     private:
                                 IPCThreadState();
                                 ~IPCThreadState();
+               status_t         waitForResponse(
+                                    Parcel* reply
+                                    , status_t* acquireResult = nullptr);
+               status_t         talkWithDriver(bool doReceive = true);
+               status_t         writeTransactionData(
+                                    int32_t cmd
+                                    , uint32_t binderFlags
+                                    , int32_t handle
+                                    , uint32_t code
+                                    , const Parcel& data
+                                    , status_t* statusBuffer);
+
                void             clearCaller();
         static void             threadDestructor(void* state);
         const  sp<ProcessState> mProcess;
+        Parcel                  mIn;
+        Parcel                  mOut;
+        status_t                mLastError;
         pid_t                   mCallingPid;
         const char*             mCallingSid;
         uid_t                   mCallingUid;

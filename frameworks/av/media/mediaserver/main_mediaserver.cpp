@@ -20,7 +20,7 @@ int main() {
 
     LOGF_ASSERT(sm != nullptr, "main: servicemanager == null");
 
-    sm->addService(String16("media.player"), nullptr);
+    //sm->addService(String16("media.player"), nullptr);
 
     LOG_D(TAG, "main end!!!: \n\n\n");
     return 0;

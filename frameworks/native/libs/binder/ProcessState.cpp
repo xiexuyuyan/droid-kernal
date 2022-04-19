@@ -217,7 +217,6 @@ namespace droid {
             if (proxy == nullptr
                 || !entry->refs->attemptIncWeak(this)) {
                 if (handle == 0) {
-                    LOG_D(TAG, "getStrongProxyForHandle: end at here");
                     Parcel data;
                     status_t status = IPCThreadState::self()->transact(
                             0, IBinder::PING_TRANSACTION
