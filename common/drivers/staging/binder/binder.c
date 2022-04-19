@@ -47,6 +47,8 @@ enum {
     BINDER_DEBUG_FAILED_TRANSACTION = 1U << 1,
     BINDER_DEBUG_DEAD_TRANSACTION   = 1U << 2,
     BINDER_DEBUG_OPEN_CLOSE         = 1U << 3,
+    BINDER_DEBUG_WRITE_READ         = 1U << 6,
+    BINDER_DEBUG_TRANSACTION        = 1U << 9,
     BINDER_DEBUG_SPINLOCKS          = 1U << 15,
 };
 
@@ -188,6 +190,73 @@ static int binder_open(struct inode* inode, struct file* file) {
     return 0;
 }
 
+static void binder_transaction(
+        struct binder_proc* proc
+        , struct binder_thread* thread
+        , struct binder_transaction_data *tr
+        , int reply
+        , binder_size_t extra_buffer_size) {
+    debug_binder(BINDER_DEBUG_TRANSACTION
+                 , "%s\n"
+                 , __FUNCTION__);
+}
+
+static int binder_thread_write(
+        struct binder_proc* proc
+        , struct binder_thread* thread
+        , binder_uintptr_t binder_buffer
+        , size_t size
+        , binder_size_t* consumed) {
+    uint32_t cmd;
+    struct binder_context* context = proc->context;
+    void __user* buffer = (void __user*)(uintptr_t)binder_buffer;
+    void __user* ptr = buffer + *consumed;
+    void __user* end = buffer + size;
+
+    while (ptr < end && thread->return_error.cmd == BR_OK) {
+        int ret;
+
+        if (get_user(cmd, (uint32_t __user*)ptr)) {
+            return -EFAULT;
+        }
+        ptr += sizeof(uint32_t);
+        // todo(20220419-151139 trace)
+        if (_IOC_NR(cmd) < ARRAY_SIZE(binder_stats.bc)) {
+            // todo(20220419-153415 I know it's to set binder_stats count
+            //  , but when does it uses it?)
+            atomic_inc(&binder_stats.bc[_IOC_NR(cmd)]);
+            atomic_inc(&proc->stats.bc[_IOC_NR(cmd)]);
+            atomic_inc(&thread->stats.bc[_IOC_NR(cmd)]);
+        }
+
+        debug_binder(BINDER_DEBUG_WRITE_READ
+                     , "%s: %d:%d cmd(%x)\n"
+                     , __FUNCTION__, proc->pid
+#ifdef __WSL__
+                     , task_pid_vnr(current)
+#else
+                     , current->pid
+#endif
+                     , cmd);
+
+        switch (cmd) {
+            case BC_TRANSACTION:
+            case BC_REPLY: {
+                struct binder_transaction_data tr;
+                if (copy_from_user(&tr, ptr, sizeof(tr))) {
+                    return -EFAULT;
+                }
+                ptr += sizeof(tr);
+                binder_transaction(proc, thread, &tr
+                    , cmd == BC_REPLY, 0);
+                break;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static struct binder_thread* binder_get_thread_ilocked(
         struct binder_proc* proc, struct binder_thread* new_thread) {
     struct binder_thread* thread = NULL;
@@ -263,6 +332,110 @@ static struct binder_thread* binder_get_thread(struct binder_proc*  proc) {
     return thread;
 }
 
+static char* getIoctlCommandName(unsigned long cmd) {
+    char* result = "undefined";
+    switch (cmd) {
+        case BINDER_WRITE_READ:
+            result = "BINDER_WRITE_READ";
+            break;
+        case BINDER_SET_IDLE_TIMEOUT:
+            result = "BINDER_SET_IDLE_TIMEOUT";
+            break;
+        case BINDER_SET_MAX_THREADS:
+            result = "BINDER_SET_MAX_THREADS";
+            break;
+        case BINDER_SET_IDLE_PRIORITY:
+            result = "BINDER_SET_IDLE_PRIORITY";
+            break;
+        case BINDER_SET_CONTEXT_MGR:
+            result = "BINDER_SET_CONTEXT_MGR";
+            break;
+        case BINDER_THREAD_EXIT:
+            result = "BINDER_THREAD_EXIT";
+            break;
+        case BINDER_VERSION:
+            result = "BINDER_VERSION";
+            break;
+        case BINDER_GET_NODE_DEBUG_INFO:
+            result = "BINDER_GET_NODE_DEBUG_INFO";
+            break;
+        case BINDER_GET_NODE_INFO_FOR_REF:
+            result = "BINDER_GET_NODE_INFO_FOR_REF";
+            break;
+        case BINDER_SET_CONTEXT_MGR_EXT:
+            result = "BINDER_SET_CONTEXT_MGR_EXT";
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
+static int binder_ioctl_write_read(
+    struct file* file, unsigned int cmd, unsigned long arg
+            , struct binder_thread* thread) {
+    int ret = 0;
+    struct binder_proc* proc = file->private_data;
+    unsigned int size = _IOC_SIZE(cmd);
+    void __user* ubuf = (void __user*)arg;
+    struct binder_write_read bwr;
+
+    if (size != sizeof(struct binder_write_read)) {
+        ret = -EINVAL;
+        goto out;
+    }
+    if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
+        ret = -EFAULT;
+        goto out;
+    }
+    debug_binder(BINDER_DEBUG_WRITE_READ
+                 , "%s: %d:%d, write %lld at %016llx"
+                   ", read %lld at %016llx\n"
+                 , __FUNCTION__, proc->pid
+#ifdef __WSL__
+                 , task_pid_vnr(current)
+#else
+                 , current->pid
+#endif
+                 , (u64)bwr.write_size, (u64)bwr.write_buffer
+                 , (u64)bwr.read_size, (u64)bwr.read_buffer);
+
+    if (bwr.write_size > 0) {
+        ret = binder_thread_write(
+                proc, thread
+                , bwr.write_buffer
+                , bwr.write_size
+                , &bwr.write_consumed);
+        // todo(20220419-143010 trace)
+        if (ret < 0) {
+            bwr.read_consumed = 0;
+            if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
+                ret = -EFAULT;
+            }
+            goto out;
+        }
+    }
+
+    debug_binder(BINDER_DEBUG_WRITE_READ
+                 , "%s: %d:%d, wrote %lld of %lld"
+                   ", read return %lld of %lld\n"
+                 , __FUNCTION__, proc->pid
+#ifdef __WSL__
+                 , task_pid_vnr(current)
+#else
+                 , current->pid
+#endif
+                 , (u64)bwr.write_consumed, (u64)bwr.write_size
+                 , (u64)bwr.read_consumed, (u64)bwr.write_size);
+    if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
+        ret = -EFAULT;
+        goto out;
+    }
+
+out:
+    return ret;
+}
+
 static long binder_ioctl(
         struct file* file, unsigned int cmd, unsigned long arg) {
     int ret;
@@ -272,7 +445,7 @@ static long binder_ioctl(
     void* __user ubuf = (void* __user)arg;
 
     debug_binder(BINDER_DEBUG_OPEN_CLOSE
-                 , "%s: %d:%d, cmd = %x, arg = %lx\n"
+                 , "%s: %d:%d, cmd(%x) = %s, arg = %lx\n"
                  , __FUNCTION__
                  , proc->pid
 #ifdef __WSL__
@@ -280,7 +453,7 @@ static long binder_ioctl(
 #else
                  , current->pid
 #endif
-                 , cmd, arg);
+                 , cmd, getIoctlCommandName(cmd), arg);
 
     // todo(18. trace)
     // todo(19. alloc self test)
@@ -296,6 +469,14 @@ static long binder_ioctl(
     }
 
     switch (cmd) {
+        case BINDER_WRITE_READ: {
+            ret = binder_ioctl_write_read(file, cmd, arg, thread);
+            if (ret) {
+                goto err;
+            }
+            break;
+        }
+
         case BINDER_SET_MAX_THREADS: {
             int max_threads;
             if (copy_from_user(

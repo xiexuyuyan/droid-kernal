@@ -28,5 +28,7 @@ cd -
 umount /dev/binderfs
 rmmod mbinder.ko
 
+0x1001111 = 79
+echo -n 79 > /sys/module/mbinder/parameters/debug_mask
 
 ./out/bin/test/common/drivers/staging/log/LogPrinter | grep --color=auto -v 'RefBase.[h(cpp)]' &

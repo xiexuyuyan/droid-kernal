@@ -67,7 +67,8 @@ static void binder_insert_free_buffer(
     new_buffer_size = binder_alloc_buffer_size(alloc, new_buffer);
 
     debug_binder_alloc(BINDER_DEBUG_BUFFER_ALLOC
-                       , "%d: add free buffer, size %zd, at %pK\n"
+                       , "%s %d: add free buffer, size %zd, at %pK\n"
+                       , __FUNCTION__
                        , alloc->pid, new_buffer_size, new_buffer);
 
     while(*p) {

@@ -28,6 +28,7 @@ enum binder_stat_types {
 };
 
 struct binder_stats {
+    atomic_t bc[_IOC_NR(BC_REPLY_SG) + 1];
     atomic_t obj_created[BINDER_STAT_COUNT];
     atomic_t obj_deleted[BINDER_STAT_COUNT];
 };
@@ -83,6 +84,7 @@ struct binder_proc {
     wait_queue_head_t  freeze_wait;
 
     struct list_head todo;
+    struct binder_stats stats;
     struct list_head delivered_death;
     int max_threads;
     struct binder_priority default_priority;
@@ -137,6 +139,7 @@ struct binder_thread {
     struct binder_error return_error;
     struct binder_error reply_error;
     wait_queue_head_t wait;
+    struct binder_stats stats;
     atomic_t tmp_ref;
     struct task_struct* task;
 };
