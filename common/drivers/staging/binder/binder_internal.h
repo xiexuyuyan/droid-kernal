@@ -125,8 +125,22 @@ struct binder_device {
     refcount_t ref;
 };
 
+struct binder_transaction_log_entry {
+    int debug_id;
+    int debug_id_done;
+    int call_type;
+    int from_proc;
+    int from_thread;
+    int target_handle;
+    int data_size;
+    int offset_size;
+    char context_name[BINDERFS_MAX_NAME + 1];
+};
+
 struct binder_transaction_log {
     atomic_t cur;
+    bool full;
+    struct binder_transaction_log_entry entry[32];
 };
 
 struct binder_thread {
@@ -142,6 +156,10 @@ struct binder_thread {
     struct binder_stats stats;
     atomic_t tmp_ref;
     struct task_struct* task;
+};
+
+struct binder_transaction {
+
 };
 
 #endif // _LINUX_BINDER_INTERNAL_H

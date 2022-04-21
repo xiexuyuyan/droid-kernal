@@ -32,3 +32,7 @@ rmmod mbinder.ko
 echo -n 79 > /sys/module/mbinder/parameters/debug_mask
 
 ./out/bin/test/common/drivers/staging/log/LogPrinter | grep --color=auto -v 'RefBase.[h(cpp)]' &
+
+cat /proc/filesystems
+
+mount [-t vfstype] [-o options] device dir

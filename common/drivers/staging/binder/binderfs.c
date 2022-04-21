@@ -419,7 +419,16 @@ static int binderfs_fill_super(
     sb->s_blocksize = PAGE_SIZE;
     sb->s_blocksize_bits = PAGE_SHIFT;
 
+    // Usually, in mount manual it is said that
+    // nodev: Do not interpret character or block special devices
+    //        on the file system.
+    // therefore, in this fill_super function, we move the
+    // setting about SB_I_NODEV if it set it.
     sb->s_iflags &= ~SB_I_NODEV;
+    // refer to the above, we set NOEXEC when mount
+    // todo(20220421-160550 though set the SB_I_NOEXEC flag
+    //  , after use mount command, it doesn't show noexec
+    //  , which only seeing after mount -o noexec ...)
     sb->s_iflags |= SB_I_NOEXEC;
     sb->s_magic = BINDERFS_SUPER_MAGIC;
     sb->s_op = &binderfs_super_ops;
@@ -429,6 +438,8 @@ static int binderfs_fill_super(
     if (!sb->s_fs_info)
         return -ENOMEM;
     info = sb->s_fs_info;
+
+    info->ipc_ns = get_ipc_ns(current->nsproxy->ipc_ns);
 
     ret = binderfs_parse_mount_opts(data, &info->mount_opts);
     if (ret)

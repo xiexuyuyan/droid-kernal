@@ -36,6 +36,8 @@
 static HLIST_HEAD(binder_procs);
 static DEFINE_MUTEX(binder_procs_lock);
 
+static atomic_t binder_last_id;
+
 #ifndef SZ_1K
 #define SZ_1K 0x400
 #endif
@@ -70,9 +72,6 @@ static int binder_stop_on_user_error;
 
 char* binder_devices_param = "binder,hwbinder,vndbinder";
 
-struct binder_transaction_log binder_transaction_log;
-struct binder_transaction_log binder_transaction_log_failed;
-
 static struct binder_stats binder_stats;
 
 static inline void binder_stats_created(enum binder_stat_types type) {
@@ -81,6 +80,25 @@ static inline void binder_stats_created(enum binder_stat_types type) {
 
 static inline void binder_stats_deleted(enum binder_stat_types type) {
     atomic_inc(&binder_stats.obj_deleted[type]);
+}
+
+struct binder_transaction_log binder_transaction_log;
+struct binder_transaction_log binder_transaction_log_failed;
+
+static struct binder_transaction_log_entry* binder_transaction_log_add(
+        struct binder_transaction_log* log) {
+    struct binder_transaction_log_entry* e;
+    unsigned int cur = atomic_inc_return(&log->cur);
+
+    if (cur >= ARRAY_SIZE(log->entry)) {
+        log->full = true;
+    }
+    e = &log->entry[cur % ARRAY_SIZE(log->entry)];
+    WRITE_ONCE(e->debug_id_done, 0);
+    // todo(20220419-192542 memory write-barrier)
+    smp_wmb();
+    memset(e, 0, sizeof(*e));
+    return e;
 }
 
 #define binder_inner_proc_lock(_proc) _binder_inner_proc_lock(_proc, __LINE__)
@@ -196,6 +214,53 @@ static void binder_transaction(
         , struct binder_transaction_data *tr
         , int reply
         , binder_size_t extra_buffer_size) {
+    int ret;
+    struct binder_transaction* t;
+    struct binder_work* w;
+    struct binder_work* temp_complete;
+    binder_size_t buffer_offset = 0;
+    binder_size_t off_start_offset, off_end_offset;
+    binder_size_t off_min;
+    binder_size_t sg_buf_offset, sg_buf_end_offset;
+    struct binder_proc* target_proc = NULL;
+    struct binder_thread* target_thread = NULL;
+    struct binder_node* target_node = NULL;
+    struct binder_transaction* in_reply_to = NULL;
+    struct binder_transaction_log_entry* e;
+    uint32_t return_error = 0;
+    uint32_t return_error_param = 0;
+    uint32_t return_error_line = 0;
+    binder_size_t last_fixup_obj_off = 0;
+    binder_size_t last_fixup_min_off = 0;
+    struct binder_context* context = proc->context;
+    int t_debug_id = atomic_inc_return(&binder_last_id);
+    char* sec_ctx = NULL;
+    u32 sec_ctx_sz = 0;
+
+    e = binder_transaction_log_add(&binder_transaction_log);
+    e->debug_id = t_debug_id;
+    e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
+    e->from_proc = proc->pid;
+    e->from_thread = thread->pid;
+    e->target_handle = tr->target.handle;
+    e->data_size = tr->data_size;
+    e->offset_size = tr->offsets_size;
+    strscpy(e->context_name, proc->context->name, BINDERFS_MAX_NAME);
+
+    if (reply) {
+        pr_err("[reply] in current debug term, we'll not into this case!");
+    } else {
+        if (tr->target.handle) {
+            pr_err("[target.handle != 0] current, we debug on servicemanager");
+        } else {
+            mutex_lock(&context->context_mgr_node_lock);
+            target_node = context->binder_context_mgr_node;
+        }
+    }
+
+
+
+
     debug_binder(BINDER_DEBUG_TRANSACTION
                  , "%s\n"
                  , __FUNCTION__);
