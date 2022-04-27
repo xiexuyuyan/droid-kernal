@@ -3,6 +3,10 @@
 
 #include "utils/VectorImpl.h"
 #include "utils/TypeHelpers.h"
+#include "log/log.h"
+
+#undef TAG
+#define TAG "Vector.h"
 
 #ifndef __has_attribute
 #define __has_attribute(x) 0
@@ -20,15 +24,23 @@ namespace droid {
     public:
         Vector();
 
-        inline size_t size() const override { return VectorImpl::size(); }
-        inline size_t capacity() const { return VectorImpl::capacity(); }
-        inline ssize_t setCapacity(size_t size) { return VectorImpl::setCapacity(size); }
-        inline const TYPE* array() const;
-        TYPE& editItemAt(size_t index);
-        ssize_t insertAt(const TYPE& prototype_item
-                         , size_t index
-                         , size_t numItems = 1);
+        inline  void            clear() { VectorImpl::clear(); }
+        inline  size_t          size() const override { return VectorImpl::size(); }
+        inline  bool            isEmpty() const { return VectorImpl::isEmpty(); }
+        inline  size_t          capacity() const { return VectorImpl::capacity(); }
+        inline  ssize_t         setCapacity(size_t size) { return VectorImpl::setCapacity(size); }
+        inline  const TYPE*     array() const;
+        inline  const TYPE&     operator [] (size_t index) const;
+        inline  const TYPE&     itemAt(size_t index) const;
+                TYPE&           editItemAt(size_t index);
+                ssize_t         insertAt(const TYPE& prototype_item
+                                         , size_t index
+                                         , size_t numItems = 1);
         // todo(20220327-164929 we mark the inline tag at definition but not in assignment, why ?)
+        inline  void            push();
+                void            push(const TYPE& item);
+        inline  ssize_t         removeItemsAt(size_t index, size_t count = 1);
+        inline  ssize_t         removeAt(size_t index) { return removeItemsAt(index); }
 
     protected:
         virtual void do_construct(void* storage, size_t num) const;
@@ -52,6 +64,20 @@ namespace droid {
     }
 
     template<class TYPE>
+    const TYPE &Vector<TYPE>::operator[](size_t index) const {
+        LOGF_ASSERT(index < size(), "operator[]"
+            ": %s: index=%u out of range (%u)"
+            , __PRETTY_FUNCTION__
+            , int(index), int(size()));
+        return *(array()+ index);
+    }
+
+    template<class TYPE>
+    const TYPE &Vector<TYPE>::itemAt(size_t index) const {
+        return operator[](index);
+    }
+
+    template<class TYPE>
     TYPE &Vector<TYPE>::editItemAt(size_t index) {
         return *( static_cast<TYPE*>(editItemLocation(index)) );
     }
@@ -62,6 +88,16 @@ namespace droid {
             , size_t index
             , size_t numItems) {
         return VectorImpl::insertAt(&item, index, numItems);
+    }
+
+    template<class TYPE> inline
+    void Vector<TYPE>::push() {
+        VectorImpl::push();
+    }
+
+    template<class TYPE> inline
+    void Vector<TYPE>::push(const TYPE& item) {
+        return VectorImpl::push(&item);
     }
 
     template <class TYPE>
@@ -95,6 +131,11 @@ namespace droid {
             void *dest, const void *from, size_t num) const {
         move_forward_type(reinterpret_cast<TYPE*>(dest)
                           , reinterpret_cast<const TYPE*>(from), num);
+    }
+
+    template<class TYPE> inline
+    ssize_t Vector<TYPE>::removeItemsAt(size_t index, size_t count) {
+        return VectorImpl::removeItemsAt(index, count);
     }
 
 } // namespace droid

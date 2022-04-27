@@ -15,8 +15,7 @@ namespace droid {
         static  sp<ProcessState>     initWithDriver(const char* driver);
                 sp<IBinder>          getContextObject(const sp<IBinder>& caller);
         typedef bool                 (*context_check_func)(
-                                                    const String8& name
-                                                    // todo(20220407-143308 String16)
+                                                    const String16& name
                                                     , const sp<IBinder>& caller
                                                     , void* userData);
                 bool                 becomeContextManager(
@@ -54,6 +53,10 @@ namespace droid {
         mutable Mutex                mLock;
 
                 Vector<handle_entry> mHandleToObject;
+
+                context_check_func   mBinderContextCheckFunc;
+                void*                mBinderContextUserData;
+
                 CallRestriction      mCallRestriction;
     };
 

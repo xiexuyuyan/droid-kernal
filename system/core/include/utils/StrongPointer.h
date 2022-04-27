@@ -22,6 +22,8 @@ namespace droid {
         sp& operator = (T* other);
         sp& operator = (const sp<T>& other);
 
+        void clear();
+
         // accessors
         inline T* operator-> () const { return m_ptr; }
         inline T* get ()        const { return m_ptr; }
@@ -61,6 +63,18 @@ namespace droid {
         LOG_V(TAG, "~sp: ");
         if (m_ptr)
             m_ptr->decStrong(this);
+    }
+
+    template<typename T>
+    void sp<T>::clear() {
+        T* oldPtr(*const_cast<T* volatile*>(&m_ptr));
+        if (oldPtr) {
+            oldPtr->decStrong(this);
+            if (oldPtr != *const_cast<T* volatile*>(&m_ptr))
+                // todo(why? this appears in android source)
+                ;
+            m_ptr = nullptr;
+        }
     }
 
     template<typename T>

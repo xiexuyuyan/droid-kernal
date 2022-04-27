@@ -78,6 +78,30 @@ namespace droid {
         return where ? index : (ssize_t) NO_MEMORY;
     }
 
+    void VectorImpl::push() {
+        push(nullptr);
+    }
+
+    void VectorImpl::push(const void *item) {
+        insertAt(item, size());
+    }
+
+    ssize_t VectorImpl::removeItemsAt(size_t index, size_t count) {
+        LOGF_ASSERT((index + count) <= size()
+                    , "[%p] ~ removeItemsAt: "
+                      "index = %d, count = %d, size = %d"
+                      , this, (int)index, (int)count, (int)size());
+        if ((index + count) > size()) {
+            return BAD_VALUE;
+        }
+        _shrink(index, count);
+        return index;
+    }
+
+    void VectorImpl::clear() {
+        _shrink(0, mCount);
+    }
+
     const void *VectorImpl::itemLocation(size_t index) const {
         LOGF_ASSERT(index < capacity()
                     , "itemLocation:%d: ", __LINE__);
@@ -239,7 +263,69 @@ namespace droid {
         return free_space;
     }
 
+    void VectorImpl::_shrink(size_t where, size_t amount) {
+        if (!mStorage) return;
 
+        LOGF_ASSERT(where + amount <= mCount
+            , "[%p] _shrink: where(%d), amount(%d), count(%d)"
+            , this, (int)where, (int)amount, (int)mCount);
+
+        size_t new_size;
+        bool assertTrue =
+                !__builtin_sub_overflow(mCount, amount, &new_size);
+        LOGF_ASSERT(assertTrue, "_shrink[%d]: ", __LINE__);
+
+        if (new_size < (capacity() / 2)) {
+            const size_t new_capacity =
+                    max(kMinVectorCapacity, new_size * 2);
+
+            if ((where == new_size)
+                && (mFlags & HAS_TRIVIAL_COPY)
+                && (mFlags & HAS_TRIVIAL_DTOR)) {
+                const SharedBuffer* cur_sb =
+                        SharedBuffer::bufferFromData(mStorage);
+                SharedBuffer* sb =
+                        cur_sb->editResize(new_capacity * mItemSize);
+                if (sb) {
+                    mStorage = sb->data();
+                } else {
+                    return;
+                }
+            } else {
+                SharedBuffer* sb =
+                        SharedBuffer::alloc(new_capacity * mItemSize);
+                if (sb) {
+                    void* array = sb->data();
+                    if (where != 0) {
+                        _do_copy(array, mStorage, where);
+                    }
+                    if (where != new_size) {
+                        const void* from =
+                            reinterpret_cast<const uint8_t*>(mStorage)
+                                + (where + amount) * mItemSize;
+                        void* dest = reinterpret_cast<uint8_t*>(array)
+                                + where * mItemSize;
+                        _do_copy(dest, from, new_size - where);
+                    }
+                    release_storage();
+                    mStorage = const_cast<void*>(array);
+                } else {
+                    return;
+                }
+            }
+        } else {
+            void* array = editArrayImpl();
+            void* to = reinterpret_cast<uint8_t*>(array)
+                    + where * mItemSize;
+            _do_destroy(to, amount);
+            if (where != new_size) {
+                const void* from = reinterpret_cast<uint8_t*>(array)
+                        + (where + amount) * mItemSize;
+                _do_move_forward(to, from, new_size - where);
+            }
+        }
+        mCount = new_size;
+    }
 
     size_t VectorImpl::itemSize() const {
         return mItemSize;
@@ -279,4 +365,42 @@ namespace droid {
     }
 
 
+// -----------------------------------------------------------------------
+    ssize_t SortedVectorImpl::indexOf(const void *item) const {
+        return _indexOrderOf(item);
+    }
+
+    ssize_t SortedVectorImpl::_indexOrderOf(
+            const void *item, size_t *order) const {
+        if (order) *order = 0;
+        if (isEmpty()) {
+            return NAME_NOT_FOUND;
+        }
+        ssize_t err = NAME_NOT_FOUND;
+        ssize_t l = 0;
+        ssize_t h = size() - 1;
+        ssize_t mid;
+        const void* a = arrayImpl();
+        const size_t s = itemSize();
+        while (l <= h) {
+            mid = l + (h - l) / 2;
+            const void* const curr =
+                    reinterpret_cast<const char*>(a) + (mid*s);
+            const int c = do_compare(curr, item);
+            if (c == 0) {
+                err = l = mid;
+                break;
+            } else if (c < 0) {
+                l = mid + 1;
+            } else {
+                h = mid - 1;
+            }
+        }
+        if (order) *order = l;
+        return err;
+    }
+
+    SortedVectorImpl::SortedVectorImpl(size_t itemSize, uint32_t flags)
+            : VectorImpl(itemSize, flags) {
+    }
 } // namespace droid

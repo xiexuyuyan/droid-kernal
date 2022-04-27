@@ -2,6 +2,7 @@
 #include "binder/ProcessState.h"
 #include "binder/IPCThreadState.h"
 #include "utils/StrongPointer.h"
+#include "utils/Looper.h"
 #include "droid/os/IServiceManager.h"
 
 #include "ServiceManager.h"
@@ -11,6 +12,7 @@
 
 using ::droid::sp;
 using ::droid::wp;
+using ::droid::Looper;
 using ::droid::ProcessState;
 using ::droid::IPCThreadState;
 using ::droid::ServiceManager;
@@ -35,6 +37,7 @@ int main(int argc, char* argv[]) {
     IPCThreadState::self()->setTheContextObject(manager);
     ps->becomeContextManager(nullptr, nullptr);
 
+    sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
 
     LOG_D(TAG, "main: end\n\n\n");
     return 0;

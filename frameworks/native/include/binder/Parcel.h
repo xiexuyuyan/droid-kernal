@@ -6,8 +6,6 @@
 #include <linux/android/binder.h>
 
 namespace droid {
-    struct flat_binder_obj;
-
     class Parcel {
         friend class IPCThreadState;
     public:

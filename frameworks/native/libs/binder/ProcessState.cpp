@@ -74,8 +74,15 @@ namespace droid {
 
     bool ProcessState::becomeContextManager(
             context_check_func checkFunc, void *userData) {
-        LOG_D(TAG, "becomeContextManager: todo");
-        // todo(20220407-143512 become context manager)
+        LOG_D(TAG, "becomeContextManager: ");
+        AutoMutex _l(mLock);
+        mBinderContextCheckFunc = checkFunc;
+        mBinderContextUserData = userData;
+
+        flat_binder_object obj {
+            .flags = FLAT_BINDER_FLAG_TXN_SECURITY_CTX,
+        };
+
         return false;
     }
 

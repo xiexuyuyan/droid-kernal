@@ -28,6 +28,21 @@ namespace droid {
         };
     };
 
+    template<typename T, typename U>
+    struct aggregate_traits {
+        enum {
+            is_pointer       = false,
+            has_trivial_ctor =
+                    traits<T>::has_trivial_ctor && traits<U>::has_trivial_ctor,
+            has_trivial_dtor =
+                    traits<T>::has_trivial_dtor && traits<U>::has_trivial_dtor,
+            has_trivial_copy =
+                    traits<T>::has_trivial_copy && traits<U>::has_trivial_copy,
+            has_trivial_move =
+                    traits<T>::has_trivial_move && traits<U>::has_trivial_move
+        };
+    };
+
 
 #define DROID_TRIVIAL_CTOR_TRAIT( T ) \
     template<> struct trait_trivial_ctor< T > { enum { value = true }; };
@@ -155,6 +170,50 @@ namespace droid {
         }
     }
 
+    template<typename TYPE> inline
+    int strictly_order_type(const TYPE& lhs, const TYPE& rhs) {
+        return (lhs < rhs) ? 1 : 0;
+    }
+
+    template<typename TYPE> inline
+    int compare_type(const TYPE& lhs, const TYPE& rhs) {
+        return
+            strictly_order_type(rhs, lhs) - strictly_order_type(lhs, rhs);
+    }
+
+
+    // -------------------------------------------------------------------
+    template<typename KEY, typename VALUE>
+    struct key_value_pair_t {
+        typedef KEY      key_t;
+        typedef VALUE    value_t;
+
+        KEY key;
+        VALUE value;
+
+        key_value_pair_t() {}
+        explicit key_value_pair_t(const KEY& k) : key(k) {}
+        inline bool operator < (const key_value_pair_t& o) const {
+            return strictly_order_type(key, o.key);
+        }
+    };
+
+    template<typename K, typename V>
+    struct trait_trivial_ctor<key_value_pair_t<K, V>> {
+        enum { value = aggregate_traits<K, V>::has_trivial_ctor };
+    };
+    template<typename K, typename V>
+    struct trait_trivial_dtor<key_value_pair_t<K, V>> {
+        enum { value = aggregate_traits<K, V>::has_trivial_dtor };
+    };
+    template<typename K, typename V>
+    struct trait_trivial_copy<key_value_pair_t<K, V>> {
+        enum { value = aggregate_traits<K, V>::has_trivial_copy };
+    };
+    template<typename K, typename V>
+    struct trait_trivial_move<key_value_pair_t<K, V>> {
+        enum { value = aggregate_traits<K, V>::has_trivial_move };
+    };
 
 } // namespace droid
 
