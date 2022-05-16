@@ -39,6 +39,10 @@ int main(int argc, char* argv[]) {
 
     sp<Looper> looper = Looper::prepare(false /*allowNonCallbacks*/);
 
+    while (true) {
+        looper->pollAll(-1);
+    }
+
     LOG_D(TAG, "main: end\n\n\n");
     return 0;
 }

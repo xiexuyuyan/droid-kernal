@@ -58,7 +58,7 @@ namespace droid {
         return gProcess;
     }
 
-    sp<IBinder> ProcessState::getContextObject(const sp<IBinder> &caller) {
+    sp<IBinder> ProcessState::getContextObject(const sp<IBinder>& /*caller*/) {
         sp<IBinder> context = getStrongProxyForHandle(0);
 
         if (context == nullptr) {
@@ -83,7 +83,25 @@ namespace droid {
             .flags = FLAT_BINDER_FLAG_TXN_SECURITY_CTX,
         };
 
-        return false;
+        int result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR_EXT, &obj);
+
+        // fallback to original method
+        if (result != 0) {
+            LOG_E(TAG, "becomeContextManager: "
+                       "Failed to set binder context manager");
+            int dummy = 0;
+            result = ioctl(mDriverFD, BINDER_SET_CONTEXT_MGR, &dummy);
+        }
+
+        if (result == -1) {
+            mBinderContextCheckFunc = nullptr;
+            mBinderContextUserData = nullptr;
+            LOGF_E(TAG, "becomeContextManager: "
+                "Binder ioctl to become context manager failed: %s"
+                , strerror(errno));
+        }
+
+        return result == 0;
     }
 
     status_t ProcessState::setThreadPoolMaxThreadCount(size_t maxThreads) {
@@ -223,14 +241,15 @@ namespace droid {
             IBinder* proxy = entry->binder;
             if (proxy == nullptr
                 || !entry->refs->attemptIncWeak(this)) {
-                if (handle == 0) {
+                // todo(20220509-102118 while service manager is dead)
+                /*if (handle == 0) {
                     Parcel data;
                     status_t status = IPCThreadState::self()->transact(
                             0, IBinder::PING_TRANSACTION
                             , data, nullptr, 0);
                     if (status == DEAD_OBJECT)
                         return nullptr;
-                }
+                }*/
                 proxy = BpBinder::create(handle);
                 entry->binder = proxy;
                 if (proxy)

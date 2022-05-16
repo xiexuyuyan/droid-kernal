@@ -32,16 +32,18 @@ namespace droid {
                                     , uint32_t code
                                     , const Parcel& data
                                     , status_t* statusBuffer);
-
+               void             processPostWriteDerefs();
                void             clearCaller();
         static void             threadDestructor(void* state);
         const  sp<ProcessState> mProcess;
-        Parcel                  mIn;
-        Parcel                  mOut;
-        status_t                mLastError;
-        pid_t                   mCallingPid;
-        const char*             mCallingSid;
-        uid_t                   mCallingUid;
+               Vector<RefBase::weakref_type*> mPostWriteWeakDerefs;
+               Vector<RefBase*> mPostWriteStrongDerefs;
+               Parcel           mIn;
+               Parcel           mOut;
+               status_t         mLastError;
+               pid_t            mCallingPid;
+               const char*      mCallingSid;
+               uid_t            mCallingUid;
     };
 
 } // namespace droid

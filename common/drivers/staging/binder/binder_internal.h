@@ -24,6 +24,7 @@ extern int __init init_binderfs(void);
 enum binder_stat_types {
     BINDER_STAT_PROC,
     BINDER_STAT_THREAD,
+    BINDER_STAT_NODE,
     BINDER_STAT_COUNT
 };
 
@@ -78,6 +79,7 @@ struct binder_proc {
     // todo(6. struct binder_proc)
     struct hlist_node proc_node;
     struct rb_root threads;
+    struct rb_root nodes;
     int pid;
     struct task_struct* tsk;
     struct list_head waiting_threads;
@@ -87,6 +89,7 @@ struct binder_proc {
     struct binder_stats stats;
     struct list_head delivered_death;
     int max_threads;
+    int tmp_ref;
     struct binder_priority default_priority;
     struct binder_alloc alloc;
     struct binder_context* context;
@@ -103,6 +106,27 @@ struct binder_node {
         struct hlist_node dead_node;
     };
     struct binder_proc* proc;
+    struct hlist_head refs;
+    int internal_strong_refs;
+    int local_weak_refs;
+    int local_strong_refs;
+    int tmp_refs;
+    binder_uintptr_t ptr;
+    binder_uintptr_t cookie;
+    struct {
+        u8 has_strong_ref:1;
+        u8 pending_strong_ref:1;
+        u8 has_weak_ref:1;
+        u8 pending_weak_ref:1;
+    };
+    struct {
+        u8 sched_policy:2;
+        u8 inherit_rt:1;
+        u8 accept_fds:1;
+        u8 txn_security_ctx:1;
+        u8 min_priority;
+    };
+    struct list_head async_todo;
     // todo(7. struct binder_node{})
 };
 
@@ -148,7 +172,9 @@ struct binder_thread {
     struct rb_node rb_node;
     struct list_head waiting_thread_node;
     int pid;
+    int looper;
     bool looper_need_return;
+    struct binder_transaction* transaction_stack;
     struct list_head todo;
     struct binder_error return_error;
     struct binder_error reply_error;

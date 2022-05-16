@@ -36,6 +36,8 @@
 static HLIST_HEAD(binder_procs);
 static DEFINE_MUTEX(binder_procs_lock);
 
+static DEFINE_SPINLOCK(binder_dead_nodes_lock);
+
 static atomic_t binder_last_id;
 
 #ifndef SZ_1K
@@ -44,6 +46,16 @@ static atomic_t binder_last_id;
 
 #define FORBIDDEN_MMAP_FLAGS (VM_WRITE)
 
+// todo(20220428-095431
+//  common/include/uapi/linux/android/binder.h +=82)
+enum flat_binder_object_shifts {
+    FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT = 9,
+};
+enum {
+    FLAT_BINDER_FLAG_SCHED_POLICY_MASK =
+            3U << FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT
+};
+
 enum {
     BINDER_DEBUG_USER_ERROR         = 1U << 0,
     BINDER_DEBUG_FAILED_TRANSACTION = 1U << 1,
@@ -51,14 +63,28 @@ enum {
     BINDER_DEBUG_OPEN_CLOSE         = 1U << 3,
     BINDER_DEBUG_WRITE_READ         = 1U << 6,
     BINDER_DEBUG_TRANSACTION        = 1U << 9,
+    BINDER_DEBUG_INTERNAL_REFS      = 1U << 12,
     BINDER_DEBUG_SPINLOCKS          = 1U << 15,
+};
+
+enum {
+    BINDER_LOOPER_STATE_REGISTERED  = 0x01,
+    BINDER_LOOPER_STATE_ENTERED     = 0x02,
+    BINDER_LOOPER_STATE_EXITED      = 0x04,
+    BINDER_LOOPER_STATE_INVALID     = 0x08,
+    BINDER_LOOPER_STATE_WAITING     = 0x08,
+    BINDER_LOOPER_STATE_POLL        = 0x20,
 };
 
 static uint32_t binder_debug_mask =
         BINDER_DEBUG_USER_ERROR
         | BINDER_DEBUG_FAILED_TRANSACTION
         | BINDER_DEBUG_DEAD_TRANSACTION
-        | BINDER_DEBUG_OPEN_CLOSE;
+        | BINDER_DEBUG_OPEN_CLOSE
+        | BINDER_DEBUG_WRITE_READ
+        | BINDER_DEBUG_TRANSACTION
+        | BINDER_DEBUG_INTERNAL_REFS
+        | BINDER_DEBUG_SPINLOCKS;
 module_param_named(debug_mask, binder_debug_mask, uint, 0644);
 
 static DECLARE_WAIT_QUEUE_HEAD(binder_user_error_wait);
@@ -121,7 +147,130 @@ static void _binder_inner_proc_unlock(
     spin_unlock(&proc->inner_lock);
 }
 
+#define binder_node_lock(node) _binder_node_lock(node, __LINE__)
+static void _binder_node_lock(struct binder_node* node, int line)
+        __acquires(&node->lock){
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n", __FUNCTION__, line);
+    spin_lock(&node->lock);
+}
 
+#define binder_node_unlock(node) _binder_node_unlock(node, __LINE__)
+static void _binder_node_unlock(struct binder_node* node, int line)
+        __releases(&node->lock){
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n", __FUNCTION__, line);
+    spin_unlock(&node->lock);
+}
+
+#define binder_node_inner_lock(node) _binder_node_inner_lock(node, __LINE__)
+static void _binder_node_inner_lock(struct binder_node* node, int line)
+        __acquires(&node->lock) __acquires(&node->proc->inner_lock) {
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n", __FUNCTION__, line);
+    spin_lock(&node->lock);
+    if (node->proc) {
+        binder_inner_proc_lock(node->proc);
+    } else {
+        // todo(20220428-165121 why? if node->proc is nullptr...)
+        __acquire(&node->proc->inner_lock);
+    }
+}
+
+#define binder_node_inner_unlock(node) _binder_node_inner_unlock(node, __LINE__)
+static void _binder_node_inner_unlock(struct binder_node* node, int line)
+        __releases(&node->lock) __releases(&node->proc->inner_lock) {
+    debug_binder(BINDER_DEBUG_SPINLOCKS
+                 , "%s: line=%d\n", __FUNCTION__, line);
+    if (node->proc) {
+        binder_inner_proc_unlock(node->proc);
+    } else {
+        __release(&node->proc->inner_lock);
+    }
+    spin_unlock(&node->lock);
+}
+
+static bool binder_worklist_empty_ilocked(struct list_head* list) {
+    return list_empty(list);
+}
+
+static void binder_enqueue_work_ilocked(
+        struct binder_work* work
+        , struct list_head* target_list) {
+    BUG_ON(target_list == NULL);
+    BUG_ON(work->entry.next && !list_empty(&work->entry));
+    list_add_tail(&work->entry, target_list);
+}
+
+static void binder_enqueue_deferred_thread_work_ilocked(
+        struct binder_thread* thread
+        , struct binder_work* work) {
+    WARN_ON(!list_empty(&thread->waiting_thread_node));
+    binder_enqueue_work_ilocked(work, &thread->todo);
+}
+
+static void binder_dequeue_work_ilocked(struct binder_work* work) {
+    list_del_init(&work->entry);
+}
+
+static bool binder_available_for_proc_work_ilocked(
+        struct binder_thread* thread) {
+    return !thread->transaction_stack
+            && binder_worklist_empty_ilocked(&thread->todo)
+            && (thread->looper & (BINDER_LOOPER_STATE_ENTERED
+                | BINDER_LOOPER_STATE_REGISTERED));
+}
+
+static void binder_wakeup_poll_thread_ilocked(
+        struct binder_proc* proc, bool sync) {
+    struct rb_node* n;
+    struct binder_thread* thread;
+    for (n = rb_first(&proc->threads); n != NULL; n = rb_next(n)) {
+        thread = rb_entry(n, struct binder_thread, rb_node);
+        if (thread->looper & BINDER_LOOPER_STATE_POLL
+            && binder_available_for_proc_work_ilocked(thread)) {
+            if (sync) {
+                wake_up_interruptible_sync(&thread->wait);
+            } else {
+                wake_up_interruptible(&thread->wait);
+            }
+        }
+    }
+}
+
+static struct binder_thread* binder_select_thread_ilocked(struct binder_proc* proc) {
+    struct binder_thread* thread;
+    assert_spin_locked(&proc->inner_lock);
+    thread = list_first_entry_or_null(&proc->waiting_threads
+            , struct binder_thread
+            , waiting_thread_node);
+    if (thread) {
+        list_del_init(&thread->waiting_thread_node);
+    }
+
+    return thread;
+}
+
+static void binder_wakeup_thread_ilocked(
+        struct binder_proc* proc
+        , struct binder_thread* thread
+        , bool sync) {
+    assert_spin_locked(&proc->inner_lock);
+    if (thread) {
+        if (sync) {
+            wake_up_interruptible_sync(&thread->wait);
+        } else {
+            wake_up_interruptible(&thread->wait);
+        }
+        return;
+    }
+    binder_wakeup_poll_thread_ilocked(proc, sync);
+}
+
+static void binder_wakeup_proc_ilocked(struct binder_proc* proc) {
+    struct binder_thread* thread = binder_select_thread_ilocked(proc);
+    binder_wakeup_thread_ilocked(proc, thread, false);
+}
 
 static bool is_rt_policy(int policy) {
     return policy == SCHED_FIFO || policy == SCHED_RR;
@@ -133,6 +282,233 @@ static bool is_fair_policy(int policy) {
 
 static bool binder_supported_policy(int policy) {
     return is_rt_policy(policy) || is_fair_policy(policy);
+}
+
+static int to_kernel_prio(int policy, int user_priority) {
+    if (is_fair_policy(policy)) {
+        return NICE_TO_PRIO(user_priority);
+    } else {
+        return MAX_USER_RT_PRIO - 1 - user_priority;
+    }
+}
+
+static int binder_inc_node_nilocked(
+        struct binder_node* node, int strong, int internal
+        , struct list_head* target_list) {
+    struct binder_proc* proc = node->proc;
+    assert_spin_locked(&node->lock);
+    if (proc) {
+        assert_spin_locked(&proc->inner_lock);
+    }
+    if (strong) {
+        if (internal) {
+            if (target_list == NULL
+                && node->internal_strong_refs == 0
+                && !(node->proc
+                    && node ==
+                        node->proc->context->binder_context_mgr_node
+                    && node->has_strong_ref)) {
+                pr_err("invalid inc strong node for %d\n"
+                       , node->debug_id);
+            }
+            node->internal_strong_refs++;
+        } else {
+            node->local_strong_refs++;
+        }
+        if (!node->has_strong_ref && target_list) {
+            struct binder_thread* thread = container_of(
+                    target_list, struct binder_thread, todo);
+            binder_dequeue_work_ilocked(&node->work);
+            BUG_ON(&thread->todo != target_list);
+            binder_enqueue_deferred_thread_work_ilocked(
+                    thread, &node->work);
+        }
+    } else {
+        if (!internal) {
+            node->local_weak_refs++;
+        }
+        if (!node->has_weak_ref && list_empty(&node->work.entry)) {
+            if (target_list == NULL) {
+                pr_err("invalid inc weak node for %d\n", node->debug_id);
+                return -EINVAL;
+            }
+            binder_enqueue_work_ilocked(&node->work, target_list);
+        }
+    }
+
+    return 0;
+}
+
+static bool binder_dec_node_nilocked(
+        struct binder_node* node, int strong, int internal) {
+    struct binder_proc* proc = node->proc;
+
+    assert_spin_locked(&node->lock);
+    if (proc) {
+        assert_spin_locked(&proc->inner_lock);
+    }
+    if (strong) {
+        if (internal) {
+            node->internal_strong_refs--;
+        } else {
+            node->local_strong_refs--;
+        }
+        if (node->local_strong_refs || node->internal_strong_refs) {
+            return false;
+        }
+    } else {
+        if (!internal) {
+            node->local_weak_refs--;
+        }
+        if (node->local_weak_refs
+                || node->tmp_refs
+                || !hlist_empty(&node->refs)) {
+            return false;
+        }
+    }
+
+    if (proc && (node->has_strong_ref || node->has_weak_ref)) {
+        if (list_empty(&node->work.entry)) {
+            // todo(20220428-182704
+            //  it means join some work into proc auto?)
+            binder_enqueue_work_ilocked(&node->work, &proc->todo);
+            binder_wakeup_proc_ilocked(proc);
+        }
+    } else {
+        if (!hlist_empty(&node->refs)
+                && !node->local_strong_refs
+                && !node->local_weak_refs
+                && !node->tmp_refs) {
+            if (proc) {
+                binder_dequeue_work_ilocked(&node->work);
+                rb_erase(&node->rb_node, &proc->nodes);
+            } else {
+                BUG_ON(!list_empty(&node->work.entry));
+                spin_lock(&binder_dead_nodes_lock);
+                // tmp_refs could have changed ,so check it again
+                if (node->tmp_refs) {
+                    spin_unlock(&binder_dead_nodes_lock);
+                    return false;
+                }
+                // todo(20220428-182823 how to justify it is dead)
+                hlist_del(&node->dead_node);
+                spin_unlock(&binder_dead_nodes_lock);
+                debug_binder(BINDER_DEBUG_INTERNAL_REFS
+                             , "dead node %d deleted\n"
+                             , node->debug_id);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+static void binder_inc_node_tmpref_ilocked(struct binder_node* node) {
+    node->tmp_refs++;
+}
+
+static void binder_free_node(struct binder_node* node) {
+    kfree(node);
+    binder_stats_deleted(BINDER_STAT_NODE);
+}
+
+static struct binder_node* binder_init_node_ilocked(
+        struct binder_proc* proc
+        , struct binder_node* new_node
+        , struct flat_binder_object* fp) {
+    struct rb_node** p = &proc->nodes.rb_node;
+    struct rb_node* parent = NULL;
+    struct binder_node* node;
+    binder_uintptr_t ptr = fp ? fp->binder : 0;
+    binder_uintptr_t cookie = fp ? fp->cookie : 0;
+    __u32 flags = fp ? fp->flags : 0;
+    s8 priority;
+
+    assert_spin_locked(&proc->inner_lock);
+
+    while (*p) {
+        parent = *p;
+        node = rb_entry(parent, struct binder_node, rb_node);
+
+        if (ptr < node->ptr) {
+            p = &(*p)->rb_left;
+        } else if (ptr > node->ptr) {
+            p = &(*p)->rb_right;
+        } else {
+            binder_inc_node_tmpref_ilocked(node);
+            return node;
+        }
+    }
+    node = new_node;
+    binder_stats_created(BINDER_STAT_NODE);
+    node->tmp_refs++;
+    rb_link_node(&node->rb_node, parent, p);
+    // todo(20220428-093657 how doe struct rb_node manage a rb tree?)
+    rb_insert_color(&node->rb_node, &proc->nodes);
+    node->debug_id = atomic_inc_return(&binder_last_id);
+    node->proc = proc;
+    node->ptr = ptr;
+    node->cookie = cookie;
+    node->work.type = BINDER_WORK_NODE;
+    priority = flags & FLAT_BINDER_FLAG_PRIORITY_MASK;
+    node->sched_policy = (flags & FLAT_BINDER_FLAG_SCHED_POLICY_MASK)
+            >> FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT;
+    node->min_priority = to_kernel_prio(node->sched_policy, priority);
+    node->accept_fds = !!(flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
+    node->inherit_rt = !!(flags & FLAT_BINDER_FLAG_TXN_SECURITY_CTX);
+    spin_lock_init(&node->lock);
+    INIT_LIST_HEAD(&node->work.entry);
+    INIT_LIST_HEAD(&node->async_todo);
+    debug_binder(BINDER_DEBUG_INTERNAL_REFS,
+                 "%d:%d node %d u%016llx c%016llx created\n"
+                 , proc->pid, current->pid, node->debug_id
+                 , (u64)node->ptr, (u64)node->cookie);
+    return node;
+}
+
+static void binder_dec_node_tmpref(struct binder_node* node) {
+    bool free_node;
+
+    binder_node_inner_lock(node);
+    if (!node->proc) {
+        spin_lock(&binder_dead_nodes_lock);
+    } else {
+        __acquire(&binder_dead_nodes_lock);
+    }
+    node->tmp_refs--;
+    BUG_ON(node->tmp_refs < 0);
+    if (!node->proc) {
+        spin_unlock(&binder_dead_nodes_lock);
+    } else {
+        __release(&binder_dead_nodes_lock);
+    }
+    free_node = binder_dec_node_nilocked(node, 0 , 1);
+    binder_node_inner_unlock(node);
+    if (free_node)
+        binder_free_node(node);
+}
+
+static void binder_put_node(struct binder_node* node) {
+    binder_dec_node_tmpref(node);
+}
+static struct binder_node* binder_new_node(
+        struct binder_proc* proc
+        , struct flat_binder_object* fp) {
+    struct binder_node* node;
+    struct binder_node* new_node = kzalloc(sizeof(*node), GFP_KERNEL);
+
+    if (!new_node) {
+        return NULL;
+    }
+    binder_inner_proc_lock(proc);
+    node = binder_init_node_ilocked(proc, new_node, fp);
+    binder_inner_proc_unlock(proc);
+    if (node != new_node) {
+        // The node was already added by another thread
+        kfree(new_node);
+    }
+
+    return node;
 }
 
 static int binder_open(struct inode* inode, struct file* file) {
@@ -208,6 +584,28 @@ static int binder_open(struct inode* inode, struct file* file) {
     return 0;
 }
 
+static struct binder_node* binder_get_node_refs_for_txn(
+        struct binder_node* node
+        , struct binder_proc** p_proc
+        , uint32_t* error) {
+    struct binder_node* target_node = NULL;
+    binder_node_inner_lock(node);
+    if (node->proc) {
+        target_node = node;
+        // node->local_strong_refs++;
+        binder_inc_node_nilocked(node, 1, 0, NULL);
+        // node->tmp_refs++;
+        binder_inc_node_tmpref_ilocked(node);
+        node->proc->tmp_ref++;
+        *p_proc = node->proc;
+    } else {
+        *error = BR_DEAD_REPLY;
+    }
+    binder_node_inner_unlock(node);
+
+    return target_node;
+}
+
 static void binder_transaction(
         struct binder_proc* proc
         , struct binder_thread* thread
@@ -247,23 +645,91 @@ static void binder_transaction(
     e->offset_size = tr->offsets_size;
     strscpy(e->context_name, proc->context->name, BINDERFS_MAX_NAME);
 
+    /*
+
     if (reply) {
-        pr_err("[reply] in current debug term, we'll not into this case!");
+        // todo(20220514-104654 we are in no reply transaction)
+        pr_err("[reply] in current debug term"
+               ", we'll not into this case!");
     } else {
         if (tr->target.handle) {
-            pr_err("[target.handle != 0] current, we debug on servicemanager");
+            // todo(20220513-102424 only handle target==servicemanager)
+            pr_err("[target.handle != 0] current"
+                   ", we debug on servicemanager");
         } else {
             mutex_lock(&context->context_mgr_node_lock);
             target_node = context->binder_context_mgr_node;
+            if (target_node) {
+                target_node = binder_get_node_refs_for_txn(
+                        target_node, &target_proc, &return_error);
+            } else {
+                return_error = BR_DEAD_REPLY;
+            }
+            mutex_unlock(&context->context_mgr_node_lock);
+            if (target_node && target_proc->pid == proc->pid) {
+                // todo(20220513-144942 module_param_call...stop_on_user)
+                pr_err("%d:%d got transaction to context manager from"
+                       " process owning it\n", proc->pid, thread->pid);
+                return_error = BR_FAILED_REPLY;
+                return_error_param = -EINVAL;
+                return_error_line = __LINE__;
+                goto err_invalid_target_handle;
+            }
         }
+        if (!target_node) {
+            return_error_param = -EINVAL;
+            return_error_line = __LINE__;
+            goto err_dead_binder;
+        }
+
+        e->to_node = target_node->debug_id;
+        // todo(20220514-105009 security check)
+        binder_inner_proc_lock(proc);
+
+        w = list_first_entry_or_null(
+                &thread->todo, struct binder_work, entry);
+        if (!(tr->flags & TF_ONE_WAY)
+            && w
+            && w->type == BINDER_WORK_TRANSACTION) {
+
+        }
+
     }
 
-
+    */
 
 
     debug_binder(BINDER_DEBUG_TRANSACTION
                  , "%s\n"
                  , __FUNCTION__);
+
+    /*
+err_dead_binder:
+err_invalid_target_handle:
+    if (target_thread) {
+        binder_thread_dec_tmpref(target_thread);
+    }
+    if (target_proc) {
+        binder_proc_dec_tmpref(target_proc);
+    }
+    if (binder_node) {
+        binder_dec_node(target_node, 1, 0);
+        binder_dec_node_tmpref(target_node);
+    }
+    // todo(20220514-103757 print debug info)
+    // todo(20220514-103804 print to binder log)
+    BUG_ON(thread->return_error.cmd != BR_OK);
+    if (in_reply_to) {
+        // todo(20220514-104144 trace...)
+        binder_restore_priority(current, in_reply_to->saved_priority);
+        binder_enqueue_thread_work(thread, &thread->return_error.work);
+        binder_send_failed_reply(in_reply_to, return_error);
+    } else {
+        thread->return_error.cmd = return_error;
+        binder_enqueue_thread_work(thread, &thread->return_error.work);
+    }
+
+    */
 }
 
 static int binder_thread_write(
@@ -480,6 +946,7 @@ static int binder_ioctl_write_read(
             goto out;
         }
     }
+    // todo(20220505-144737 if (bwr.read_size > 0))
 
     debug_binder(BINDER_DEBUG_WRITE_READ
                  , "%s: %d:%d, wrote %lld of %lld"
@@ -498,6 +965,58 @@ static int binder_ioctl_write_read(
     }
 
 out:
+    return ret;
+}
+
+static int binder_ioctl_set_ctx_mgr(
+        struct file* file, struct flat_binder_object* fbo) {
+    int ret = 0;
+    struct binder_proc* proc = file->private_data;
+    struct binder_context* context = proc->context;
+    struct binder_node* new_node;
+    // todo(20220427-160607 to consider in WSL, pid...)
+    kuid_t curr_euid = current_euid();
+
+    mutex_lock(&context->context_mgr_node_lock);
+    if (context->binder_context_mgr_node) {
+        pr_err("BINDER_SET_CONTEXT_MGR already set\n");
+        ret = -EBUSY;
+        goto out;
+    }
+    // todo(20220428-085816 selinux security)
+    // ERROR: modpost: undefined!
+    /*ret = security_binder_set_context_mgr(proc->tsk);
+    if (ret < 0) {
+        goto out;
+    }*/
+    // todo(20220428-085954 make a graphic uid)
+    if (uid_valid(context->binder_context_mgr_uid)) {
+        if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
+            pr_err("BINDER_SET_CONTEXT_MGR bad uid %d != %d\n"
+                   , from_kuid(&init_user_ns, curr_euid)
+                   , from_kuid(&init_user_ns
+                   , context->binder_context_mgr_uid));
+            ret = -EPERM;
+            goto out;
+        }
+    } else {
+        context->binder_context_mgr_uid = curr_euid;
+    }
+    new_node = binder_new_node(proc, fbo);
+    if (!new_node) {
+        ret = -EPERM;
+        goto out;
+    }
+    binder_node_lock(new_node);
+    new_node->local_weak_refs++;
+    new_node->local_strong_refs++;
+    new_node->has_weak_ref = 1;
+    new_node->has_strong_ref = 1;
+    context->binder_context_mgr_node = new_node;
+    binder_node_unlock(new_node);
+    binder_put_node(new_node);
+out:
+    mutex_unlock(&context->context_mgr_node_lock);
     return ret;
 }
 
@@ -556,6 +1075,29 @@ static long binder_ioctl(
             binder_inner_proc_unlock(proc);
             break;
         }
+
+        case BINDER_SET_CONTEXT_MGR_EXT: {
+            struct flat_binder_object fbo;
+
+            if (copy_from_user(&fbo, ubuf, sizeof(fbo))) {
+                ret = -EINVAL;
+                goto err;
+            }
+
+            ret = binder_ioctl_set_ctx_mgr(file, &fbo);
+            if (ret) {
+                goto err;
+            }
+            break;
+        }
+
+        case BINDER_SET_CONTEXT_MGR:
+            ret = binder_ioctl_set_ctx_mgr(file, NULL);
+            if (ret) {
+                goto err;
+            }
+            break;
+
         case BINDER_VERSION: {
             struct binder_version* __user ver = ubuf;
             if (size != sizeof(struct binder_version)) {

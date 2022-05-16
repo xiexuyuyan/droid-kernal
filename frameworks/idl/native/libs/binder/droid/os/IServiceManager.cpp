@@ -32,7 +32,7 @@ namespace droid::os {
         // todo(20220416-150758 complete addService...)
         LOGF_D(TAG, "addService: name = %s", name.c_str());
 
-        remote()->transact(0, data, &reply);
+        remote()->transact(0/* function index */, data, &reply);
 
         return ::droid::binder::Status::fromExceptionCode(10086);
     }

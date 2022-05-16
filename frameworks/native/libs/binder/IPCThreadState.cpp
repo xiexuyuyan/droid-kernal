@@ -20,6 +20,7 @@ namespace droid {
 
 
     IPCThreadState *droid::IPCThreadState::self() {
+        LOGF_D(TAG, "self: ");
         if (gHaveTLS.load(std::memory_order_acquire)) {
 restart:
             const pthread_key_t key = gTLS;
@@ -61,6 +62,19 @@ restart:
         return nullptr;
     }
 
+    void IPCThreadState::processPostWriteDerefs() {
+        for (size_t i = 0; i < mPostWriteWeakDerefs.size(); i++) {
+            RefBase::weakref_type* refs = mPostWriteWeakDerefs[i];
+            refs->decWeak(mProcess.get());
+        }
+        mPostWriteWeakDerefs.clear();
+
+        for (size_t i = 0; i < mPostWriteStrongDerefs.size(); i++) {
+            RefBase* obj = mPostWriteStrongDerefs[i];
+            obj->decStrong(mProcess.get());
+        }
+        mPostWriteStrongDerefs.clear();
+    }
 
     void IPCThreadState::clearCaller() {
         mCallingPid = getpid();
@@ -156,7 +170,7 @@ restart:
 
     status_t IPCThreadState::waitForResponse(
             Parcel *reply, status_t *acquireResult) {
-        uint32_t cmd;
+        uint32_t cmd = 10086;
         int32_t err;
         while (1) {
             if ((err = talkWithDriver()) < NO_ERROR) {
@@ -167,7 +181,7 @@ restart:
             if (err < NO_ERROR) {
                 break;
             }
-
+            // todo(20220509-171627 if (mIn.dataAvail() == 0) continue;)
             // cmd = (uint32_t)mIn.readInt32();
             LOGF_D(TAG, "waitForResponse: %d", cmd);
             goto finish;
@@ -207,8 +221,9 @@ finish:
          * , only receive return-cmds from driver
          * -----------------------------
            | doReceive | needRead |
-           | True      | True     | data in mIn from driver finish handle
-           | True      | False    | data in mIn from driver not ...
+           | True      | True     | data in mIn from driver not ...
+           | True      | False    | data in mIn from driver finish handle
+           | False                | just only write data to driver
            ------------------------------
          */
         const size_t outAvail =
@@ -244,6 +259,23 @@ finish:
             LOGF_D(TAG, "talkWithDriver: err = %s", strerror(err));
         } while(err == -EINTR);
 
+        if (err >= NO_ERROR) {
+            if (bwr.write_consumed > 0) {
+                if (bwr.write_consumed < mOut.dataSize()) {
+                    // todo(20220510-084657 log err)
+                    LOG_E(TAG, "talkWithDriver: 20220510-084657 todo...");
+                } else {
+                    mOut.setDataSize(0);
+                    processPostWriteDerefs();
+                }
+            }
+            if (bwr.read_consumed > 0) {
+                mIn.setDataSize(bwr.read_consumed);
+                mIn.setDataPosition(0);
+            }
+            return NO_ERROR;
+        }
+
         return -EBADF;;
     }
 
@@ -269,7 +301,8 @@ finish:
         if (err == NO_ERROR) {
             tr.data_size = data.ipcDataSize();
             tr.data.ptr.buffer = data.ipcData();
-            tr.offsets_size = data.ipcObjectsCount()*sizeof(binder_size_t);
+            tr.offsets_size =
+                    data.ipcObjectsCount() * sizeof(binder_size_t);
             tr.data.ptr.offsets = data.ipcObjects();
         } else if (statusBuffer) {
             // todo(20220418-102037 when it goto this condition?)
