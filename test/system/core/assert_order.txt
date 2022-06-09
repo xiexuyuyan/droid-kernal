@@ -1,0 +1,58 @@
+#include <cstring>
+#include "log/log.h"
+#include <stdarg.h>
+
+#undef TAG
+#define TAG "String8Test.cpp"
+
+class Demo {
+public:
+    int a;
+    int b;
+    float c;
+    virtual void func();
+};
+
+
+static void toIntegerArray(int array[], int size, ...) {
+    va_list p;
+
+    va_start(p, size);
+    for (int i = 0; i < size; i++) {
+        array[i] = va_arg(p, int);
+    }
+    va_end(p);
+}
+
+template<class class_type, class data_type1, class data_type2>
+static const char *assert_order(
+        data_type1 class_type::*mem1
+        , data_type2 class_type::*mem2) {
+
+    int array[2] = {0};
+    toIntegerArray(array, 2, mem1, mem2);
+    for(int i = 0; i < 2; i++) {
+        LOGF_D(TAG, "assert_order: array[%d] = %d", i, array[i]);
+    }
+
+    return const_cast<char *>(
+            array[0] < array[1]
+            ? "member 1 occurs first"
+            : "member 2 occurs first");
+}
+
+int main() {
+    LOG_D(TAG, "main: start");
+    // const char* result = assert_order(&Demo::c, &Demo::b);
+    // LOGF_D(TAG, "main: result = %s", result);
+
+
+    int array[4] = {0};
+    toIntegerArray(array, 3, &Demo::a, &Demo::b, &Demo::c);
+    for(int i = 0; i < 3; i++) {
+        LOGF_D(TAG, "assert_order: array[%d] = %d", i, array[i]);
+    }
+
+
+    LOG_D(TAG, "main: \n\n\n");
+}

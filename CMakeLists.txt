@@ -44,3 +44,5 @@ add_subdirectory(test/system/core)
 add_subdirectory(test/frameworks/droid/core/zygote/zygotesocket)
 
 add_subdirectory(test/jvm)
+
+add_subdirectory(test/DroidThread)

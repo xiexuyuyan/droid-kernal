@@ -104,6 +104,7 @@ namespace droid {
 
         explicit wp(T* other);
         wp(const wp<T>& other);
+        explicit wp(const sp<T>& other);
 
         ~wp();
 
@@ -126,6 +127,11 @@ namespace droid {
     wp<T>::wp(const wp<T> &other): m_ptr(other.m_ptr), m_refs(other.m_refs) {
         if (m_ptr)
             m_refs->incWeak(this);
+    }
+
+    template<typename T>
+    wp<T>::wp(const sp<T> &other) : m_ptr(other.m_ptr){
+        m_refs = m_ptr ? m_ptr->creatWeak(this) : nullptr;
     }
 
     template<typename T>
