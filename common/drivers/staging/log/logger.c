@@ -235,7 +235,7 @@ static ssize_t logger_write_iter(struct kiocb* iocb
         , struct iov_iter* from) {
     struct logger_log* log = file_get_log(iocb->ki_filp);
     struct logger_entry header;
-    ktime_t now;
+    ktime_t now, real_now;
     size_t len, count, w_off;
 
     char* str;
@@ -245,6 +245,7 @@ static ssize_t logger_write_iter(struct kiocb* iocb
     count = min_t(size_t, iov_iter_count(from), LOGGER_ENTRY_MAX_PAYLOAD);
 
     now = ktime_get();
+    real_now = ktime_get_real();
 
 #ifdef __WSL__
     header.pid = task_tgid_vnr(current);
@@ -255,6 +256,8 @@ static ssize_t logger_write_iter(struct kiocb* iocb
 #endif
     header.nsec = (s32)do_div(now, 1000000000);
     header.sec = (s32)now;
+    header.real_nsec = (s32)do_div(real_now, 1000000000);
+    header.real_sec = (s32)real_now;
     header.euid = current_euid();
     header.len = count;
     header.hdr_size = sizeof(struct logger_entry);

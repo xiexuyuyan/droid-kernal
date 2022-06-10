@@ -33,6 +33,13 @@ static char LogPriorityCharacter[] {
 int main(int argc, char* argv[]) {
     std::cout<<"---start print log---"<<std::endl;
 
+    int keyWordStart = 2;
+
+    int withTimestamp = 0;
+    if (argc > 1) {
+        withTimestamp = argv[1][0] - '0';
+    }
+
     for (int i = 1; i < argc; ++i) {
         std::cout<<"argv["<<i;
         std::cout<<"] = "<<argv[i]<<std::endl;
@@ -57,7 +64,7 @@ int main(int argc, char* argv[]) {
 
 
             bool mskip = false;
-            for (int i = 1; i < argc; ++i) {
+            for (int i = keyWordStart; i < argc; ++i) {
                 if (!strcmp(tag, argv[i])) {
                     mskip = true;
                     break;
@@ -71,6 +78,22 @@ int main(int argc, char* argv[]) {
                 std::cout<<entry->pid<<" ";
                 std::cout<<entry->tid<<" ";
             }
+
+            if (withTimestamp) {
+                std::cout<<entry->sec<<".";
+                std::cout<<(entry->nsec / 100)<<" ";
+                // std::cout<<entry->real_sec<<" ";
+                // std::cout<<entry->real_nsec<<" ";
+
+                time_t t = entry->real_sec;
+                struct tm* time = localtime(&t);
+                char nowStr[64];
+                strftime(nowStr, 64, "%Y-%m-%d %H:%M:%S", time);
+
+                std::cout<<nowStr<<".";
+                std::cout<<(entry->real_nsec / 1000000)<<" ";
+            }
+
             std::cout<<LogPriorityCharacter[priority - '0'];
             std::cout<<"/"<<tag;
             std::cout<<" "<<msg<<std::endl;

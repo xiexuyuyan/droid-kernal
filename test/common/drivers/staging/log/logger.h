@@ -11,8 +11,10 @@ struct logger_entry {
     __s32 pid; // generating process's pid
                // , tgid means thread group id
     __s32 tid; // generating process's tid
-    __s32 sec; // seconds since Epoch 1970.1.1:0.0.0
+    __s32 sec; // seconds since boot
     __s32 nsec; // nanoseconds since sec
+    __s32 real_sec; // seconds since utc
+    __s32 real_nsec; // nanoseconds since sec
     uid_t euid; //Effective UID of logger
     char msg[0]; // the entry's payload
 };
