@@ -113,7 +113,7 @@ namespace droid {
     }
 
     Thread::~Thread() {
-
+        // LOGF_V(TAG, "~Thread: (%p)", this);
     }
 
     status_t Thread::run(
@@ -194,7 +194,7 @@ namespace droid {
             }
             strong.clear();
             strong = weak.promote();
-        } while(true);
+        } while(strong != nullptr);
 
         return 0;
     }
