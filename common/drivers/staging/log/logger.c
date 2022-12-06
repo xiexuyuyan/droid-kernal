@@ -347,6 +347,7 @@ static int logger_open(struct inode* inode, struct file* file) {
         reader->r_ver = 1;
         reader->r_all = (in_egroup_p(inode->i_gid)
                 || capable(CAP_SYSLOG));
+        debug_logger(LOGGER_DEBUG_OPEN_CLOSE, "reader read all: %d || %d.\n", in_egroup_p(inode->i_gid), capable(CAP_SYSLOG));
 
         INIT_LIST_HEAD(&reader->list);
 
