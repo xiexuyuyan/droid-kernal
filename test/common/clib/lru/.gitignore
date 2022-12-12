@@ -1,0 +1,8 @@
+*
+!.gitignore
+!LruMain.c
+!LruShrinkker.c
+!LruMain.h
+!LruShrinkker.h
+!CMakeLists.txt
+!Makefile

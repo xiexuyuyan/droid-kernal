@@ -8,9 +8,9 @@ add_definitions(
         -DKBUILD_MODNAME="binder"
 )
 
-include_directories("/root/linux/linux-kernel-wsl/include/")
-include_directories("/root/linux/linux-kernel-wsl/arch/x86/include/")
-include_directories("/root/linux/linux-kernel-wsl/arch/x86/include/generated/")
+include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/include/")
+include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/arch/x86/include/")
+include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/arch/x86/include/generated/")
 
 if (DEFINED CMAKE_BUILD_TYPE)
     if (CMAKE_BUILD_TYPE STREQUAL "Clion")

@@ -39,6 +39,8 @@ add_subdirectory(frameworks/idl)
 
 add_subdirectory(test/common/drivers/staging/log)
 
+add_subdirectory(test/common/clib)
+
 add_subdirectory(test/system/core)
 
 add_subdirectory(test/frameworks/droid/core/zygote/zygotesocket)
