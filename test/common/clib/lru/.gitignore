@@ -1,7 +1,7 @@
 *
 !.gitignore
 !LruMain.c
-!LruShrinkker.c
+!LruShrinker.c
 !LruMain.h
 !LruShrinkker.h
 !CMakeLists.txt
