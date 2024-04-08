@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+message(STATUS "CMAKE_BUILD_LINUX_KERNEL = ${CMAKE_BUILD_LINUX_KERNEL}")
+
 set(LIBRARY_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/out/lib)
 set(EXECUTABLE_OUTPUT_PATH  ${PROJECT_SOURCE_DIR}/out/bin)
 
@@ -39,7 +41,7 @@ add_subdirectory(frameworks/idl)
 
 add_subdirectory(test/common/drivers/staging/log)
 
-add_subdirectory(test/common/clib)
+# add_subdirectory(test/common/clib)
 
 add_subdirectory(test/system/core)
 

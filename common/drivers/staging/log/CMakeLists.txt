@@ -8,9 +8,9 @@ add_definitions(
         -DKBUILD_MODNAME="logger"
 )
 
-include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/include/")
-include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/arch/x86/include/")
-include_directories("/home/yuyan/projects/linux/linux-kernel-wsl/arch/x86/include/generated/")
+include_directories("${CMAKE_BUILD_LINUX_KERNEL}/include/")
+include_directories("${CMAKE_BUILD_LINUX_KERNEL}/arch/x86/include/")
+include_directories("${CMAKE_BUILD_LINUX_KERNEL}/arch/x86/include/generated/")
 
 if (DEFINED CMAKE_BUILD_TYPE)
     if (CMAKE_BUILD_TYPE STREQUAL "Clion")
