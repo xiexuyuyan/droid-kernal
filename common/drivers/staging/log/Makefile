@@ -4,9 +4,9 @@ KBUILD_CFLAGS += -g
 KBUILD_CFLAGS += -D__WSL__
 
 all:
-	@make -C ~/projects/linux/linux-kernel-wsl/ M=$(PWD) modules
+	@make -C $(MAKE_BUILD_LINUX_KERNEL)/ M=$(PWD) modules
 
 clean:
-	@make -C ~/projects/linux/linux-kernel-wsl/ M=$(PWD) clean
+	@make -C $(MAKE_BUILD_LINUX_KERNEL)/ M=$(PWD) clean
 
 
