@@ -113,7 +113,7 @@ static ssize_t copy_header_to_user(int ver
     size_t hdr_len;
 
     hdr = entry;
-    hdr_len = sizeof(struct logger_entry);
+    hdr_len = get_user_hdr_len(ver);
 
     return copy_to_user(buf, hdr, hdr_len);
 }
@@ -193,8 +193,8 @@ start:
     mutex_lock(&log->mutex);
 
     if (!reader->r_all)
-        reader->r_off = get_next_entry_by_uid(log
-                , reader->r_off, current_euid());
+        reader->r_off =
+            get_next_entry_by_uid(log, reader->r_off, current_euid());
 
     if (unlikely(log->w_off == reader->r_off)) {
         mutex_unlock(&log->mutex);
@@ -224,9 +224,54 @@ static inline struct logger_log* file_get_log(struct file* file) {
     return file->private_data;
 }
 
+
+static size_t get_next_entry(struct logger_log* log, size_t off, size_t len) {
+    size_t count = 0;
+
+    do {
+        size_t nr = sizeof(struct logger_entry)
+                + get_entry_msg_len(log, off);
+        off = logger_offset(log, off + nr);
+        count += nr;
+    } while (count < len);
+
+    return off;
+}
+
+/*
+ * |---------- a xxxxxxxxxx b ----------|
+ *                  c^
+ * |xxxxxxxxxx b ---------- a xxxxxxxxxx|
+ *     c^
+ * or                               c^
+ */
+static inline int is_between(size_t a, size_t b, size_t c) {
+    if (a < b) {
+        if(a < c && c <= b) {
+            return 1;
+        }
+    } else {
+        if (c <= b || a < c) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static void fix_up_readers(struct logger_log* log, size_t len) {
-    // TODO("when log_entry's header is split by two part")
     // only happen when reset log->head while LOGGER_FLUSH_LOG
+    size_t old = log->w_off;
+    size_t new = logger_offset(log, old + len);
+    struct logger_reader *reader;
+
+    // the next writing will override the log_reader head.
+    if (is_between(old, new, log->head))
+        log->head = get_next_entry(log, log->head, len);
+
+    list_for_each_entry(reader, &log->readers, list)
+        if (is_between(old, new, reader->r_off))
+            reader->r_off = get_next_entry(log, reader->r_off, len);
 }
 
 /* write method, implementing support for write(),
@@ -267,7 +312,7 @@ static ssize_t logger_write_iter(struct kiocb* iocb
 
     mutex_lock(&log->mutex);
 
-    fix_up_readers(log, sizeof(struct logger_entry) + header.len);
+    // fix_up_readers(log, sizeof(struct logger_entry) + header.len);
 
     // len reset with min (header, free space of buffer)
     len = min(sizeof(header), log->size - log->w_off);
@@ -347,7 +392,10 @@ static int logger_open(struct inode* inode, struct file* file) {
         reader->r_ver = 1;
         reader->r_all = (in_egroup_p(inode->i_gid)
                 || capable(CAP_SYSLOG));
-        debug_logger(LOGGER_DEBUG_OPEN_CLOSE, "reader read all: %d || %d.\n", in_egroup_p(inode->i_gid), capable(CAP_SYSLOG));
+        debug_logger(
+                LOGGER_DEBUG_OPEN_CLOSE
+                , "reader read all: %d || %d.\n"
+                , in_egroup_p(inode->i_gid), capable(CAP_SYSLOG));
 
         INIT_LIST_HEAD(&reader->list);
 
@@ -389,6 +437,7 @@ static const struct file_operations logger_fops = {
         .unlocked_ioctl = logger_ioctl,*/
         .open       = logger_open,
         .release    = logger_release,
+        .llseek     = no_llseek,
 };
 
 static int __init create_log(char* log_name, int size) {
@@ -489,6 +538,9 @@ static void __exit logger_exit(void) {
 module_init(logger_init);
 module_exit(logger_exit);
 
+#ifndef KBUILD_MODFILE
+#define KBUILD_MODFILE "logger.c"
+#endif // KBUILD_MODFILE
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("xiexuyuyan, <2351783158@qq.com>");
 MODULE_DESCRIPTION("droid Logger");
