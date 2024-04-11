@@ -473,6 +473,8 @@ static int __init create_log(char* log_name, int size) {
     log->w_off = 0;
     log->head = 0;
     log->size = size;
+    log->misc.mode =
+            S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
     INIT_LIST_HEAD(&log->logs);
     list_add_tail(&log->logs, &log_list);
