@@ -288,7 +288,7 @@ static int to_kernel_prio(int policy, int user_priority) {
     if (is_fair_policy(policy)) {
         return NICE_TO_PRIO(user_priority);
     } else {
-        return MAX_USER_RT_PRIO - 1 - user_priority;
+        return MAX_RT_PRIO - 1 - user_priority;
     }
 }
 
@@ -1251,6 +1251,9 @@ static void __exit binder_exit(void) {
 module_init(binder_init);
 module_exit(binder_exit);
 
+#ifndef KBUILD_MODFILE
+#define KBUILD_MODFILE "binder.c"
+#endif // KBUILD_MODFILE
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("xiexuyuyan, <2351783158@qq.com>");

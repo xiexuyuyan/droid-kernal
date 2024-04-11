@@ -51,3 +51,14 @@ else()
 endif ()
 
 add_library(dlog_shared SHARED ${sourceFiles})
+
+
+ java -Djava.library.path="/mnt/c/Users/CoderWu/Desktop/individual/Projects/DroidKernel/out/lib/frameworks/droid/runtime/jni"
+ -Djava.class.path="/mnt/c/Users/CoderWu/Desktop/individual/Projects/Hulk/build/classes/java/main" com.yuyan.Main
+
+export VAR_1=/mnt/c/Users/CoderWu/Desktop/individual/Projects/DroidKernel/out/lib/frameworks/droid/runtime/jni
+export VAR_2=/mnt/c/Users/CoderWu/Desktop/individual/Projects/Hulk/build/classes/java/main
+
+javac -d build/classes/java/main src/**/*.java
+
+java -Djava.library.path=$VAR_1 -Djava.class.path=$VAR_2 com.yuyan.Main

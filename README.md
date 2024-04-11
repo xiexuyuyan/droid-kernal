@@ -6,6 +6,53 @@
     - [官方文档](https://github.com/torvalds/linux/blob/master/Documentation/kbuild/modules.rst)
     - ```make -C <path_to_kernel_src> M=$PWD [target]```
 
+## 内核模块编译
+
+### 需要被EXPORT_SYMBOL
+
+1. init_ipc_ns
+2. put_ipc_ns
+3. zap_page_range
+
+```bash
+diff --git a/ipc/msgutil.c b/ipc/msgutil.c
+index d0a0e877cadd..c3495be87009 100644
+--- a/ipc/msgutil.c
++++ b/ipc/msgutil.c
+@@ -33,6 +33,7 @@ struct ipc_namespace init_ipc_ns = {
+        .ns.ops = &ipcns_operations,
+ #endif
+ };
++EXPORT_SYMBOL(init_ipc_ns);
+
+ struct msg_msgseg {
+        struct msg_msgseg *next;
+diff --git a/ipc/namespace.c b/ipc/namespace.c
+index ae83f0f2651b..5872746c620e 100644
+--- a/ipc/namespace.c
++++ b/ipc/namespace.c
+@@ -172,6 +172,7 @@ void put_ipc_ns(struct ipc_namespace *ns)
+                        schedule_work(&free_ipc_work);
+        }
+ }
++EXPORT_SYMBOL(put_ipc_ns);
+
+ static inline struct ipc_namespace *to_ipc_ns(struct ns_common *ns)
+ {
+diff --git a/mm/memory.c b/mm/memory.c
+index 1bb01b12db53..87b6ed0b5eb2 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -1668,6 +1668,7 @@ void zap_page_range(struct vm_area_struct *vma, unsigned long start,
+        mmu_notifier_invalidate_range_end(&range);
+        tlb_finish_mmu(&tlb);
+ }
++EXPORT_SYMBOL(zap_page_range);
+
+ /**
+  * zap_page_range_single - remove user pages in a given range
+```
+
 ## 使用 cmake 编译项目
 
 ### 典型步骤
