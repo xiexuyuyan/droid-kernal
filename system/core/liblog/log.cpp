@@ -19,6 +19,18 @@ int __droid_log_buf_write(int bufID, int priority, const char *tag, const char *
     if (!tag)
         return 0;
 
+    char* ignoreTag[] = {
+            "RefBase.h"
+            , "RefBase.cpp"
+            , "StrongPointer.h"
+    };
+
+    for (int i = 0; i < sizeof(ignoreTag) / sizeof(char*); i++) {
+        if (priority < DROID_LOG_WARN && 0 == strcmp(ignoreTag[i], tag)) {
+            return 0;
+        }
+    }
+
     // format ascii int -> char
     priority += '0';
 

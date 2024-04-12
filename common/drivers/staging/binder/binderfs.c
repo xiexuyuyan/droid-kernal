@@ -123,7 +123,7 @@ static int binderfs_binder_device_create(
     inode->i_ino = minor + INODE_OFFSET;
     // todo(14. what means for i_ino to plus INODE_OFFSET)
     inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
-    init_special_inode(inode, S_IFCHR | 0600,
+    init_special_inode(inode, S_IFCHR | 0666,
                        MKDEV(MAJOR(binderfs_dev), minor));
     inode->i_fop = &binder_fops;
     inode->i_uid = info->root_uid;
@@ -374,7 +374,7 @@ static int binderfs_binder_ctl_create(struct super_block* sb) {
 
     inode->i_ino = SECOND_INODE;
     inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
-    init_special_inode(inode, S_IFCHR | 0600, MKDEV(MAJOR(binderfs_dev), minor));
+    init_special_inode(inode, S_IFCHR | 0666, MKDEV(MAJOR(binderfs_dev), minor));
     inode->i_fop = &binder_ctl_fops;
     inode->i_uid = info->root_uid;
     inode->i_gid = info->root_gid;

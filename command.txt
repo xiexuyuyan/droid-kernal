@@ -62,3 +62,5 @@ export VAR_2=/mnt/c/Users/CoderWu/Desktop/individual/Projects/Hulk/build/classes
 javac -d build/classes/java/main src/**/*.java
 
 java -Djava.library.path=$VAR_1 -Djava.class.path=$VAR_2 com.yuyan.Main
+
+watch -n 0.1 "sudo dmesg -c >> Log/$(date +"%Y-%m-%d_%H-%M-%S").log"
