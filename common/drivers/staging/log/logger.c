@@ -72,12 +72,6 @@ static size_t logger_offset(struct logger_log* log, size_t n) {
     return n & (log->size - 1);
 }
 
-static size_t get_next_entry_by_uid(struct logger_log* log
-        , size_t off, kuid_t euid) {
-    // TODO("permission about, trigger when can't read all log buffer")
-    return 0;
-}
-
 static size_t get_user_hdr_len(int ver) {
     return sizeof(struct logger_entry);
 }
@@ -96,6 +90,24 @@ static struct logger_entry* get_entry_header(
     }
 
     return (struct logger_entry*)(log->buffer + off);
+}
+
+static size_t get_next_entry_by_uid(struct logger_log* log
+        , size_t off, kuid_t euid) {
+    while (log->w_off != off) {
+        struct logger_entry *entry;
+        struct logger_entry scratch;
+
+        entry = get_entry_header(log, off, &scratch);
+
+        if (uid_eq(entry->euid, euid)) {
+            return off;
+        }
+
+        off = logger_offset(log
+                , sizeof(struct logger_entry) + entry->len);
+    }
+    return off;
 }
 
 static __u32 get_entry_msg_len(struct logger_log* log
