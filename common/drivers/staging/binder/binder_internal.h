@@ -25,6 +25,10 @@ enum binder_stat_types {
     BINDER_STAT_PROC,
     BINDER_STAT_THREAD,
     BINDER_STAT_NODE,
+    BINDER_STAT_REF,
+    BINDER_STAT_DEATH,
+    BINDER_STAT_TRANSACTION,
+    BINDER_STAT_TRANSACTION_COMPLETE,
     BINDER_STAT_COUNT
 };
 
@@ -57,11 +61,11 @@ struct binder_work {
     enum binder_work_type {
         BINDER_WORK_TRANSACTION = 1,
         BINDER_WORK_TRANSACTION_COMPLETE,
+        BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT,
         BINDER_WORK_RETURN_ERROR,
         BINDER_WORK_NODE,
         BINDER_WORK_DEAD_BINDER,
         BINDER_WORK_DEAD_BINDER_AND_CLEAR,
-        BINDER_WORK_CLEAR_DEATH_NOTIFICATION,
     } type;
 };
 
@@ -156,8 +160,14 @@ struct binder_transaction_log_entry {
     int from_proc;
     int from_thread;
     int target_handle;
+    int to_proc;
+    int to_thread;
+    int to_node;
     int data_size;
-    int offset_size;
+    int offsets_size;
+    int return_error_line;
+    uint32_t return_error;
+    uint32_t return_error_param;
     char context_name[BINDERFS_MAX_NAME + 1];
 };
 
@@ -185,7 +195,33 @@ struct binder_thread {
 };
 
 struct binder_transaction {
+    int debug_id;
+    struct binder_work work;
+    struct binder_thread *from;
+    struct binder_transaction *from_parent;
+    struct binder_proc *to_proc;
+    struct binder_thread *to_thread;
+    struct binder_transaction *to_parent;
+    unsigned need_reply:1;
+    /* unsigned is_dead:1; */       /* not used at the moment */
 
+    struct binder_buffer *buffer;
+    unsigned int    code;
+    unsigned int    flags;
+    struct binder_priority priority;
+    struct binder_priority saved_priority;
+    bool set_priority_called;
+    bool is_nested;
+    kuid_t  sender_euid;
+    struct list_head fd_fixups;
+    binder_uintptr_t security_ctx;
+    /**
+    * @lock:  protects @from, @to_proc, and @to_thread
+    *
+    * @from, @to_proc, and @to_thread can be set to NULL
+    * during thread teardown
+    */
+    spinlock_t lock;
 };
 
 #endif // _LINUX_BINDER_INTERNAL_H

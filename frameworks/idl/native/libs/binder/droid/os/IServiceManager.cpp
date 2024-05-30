@@ -11,6 +11,7 @@ namespace droid::os {
 }
 
 #include "droid/os/BpServiceManager.h"
+#include "droid/os/BnServiceManager.h"
 namespace droid::os {
 
     BpServiceManager::BpServiceManager(
@@ -31,8 +32,9 @@ namespace droid::os {
 
         // todo(20220416-150758 complete addService...)
         LOGF_D(TAG, "addService: name = %s", name.c_str());
+        data.write(name.c_str(), strlen(name.c_str()));
 
-        remote()->transact(0/* function index */, data, &reply);
+        remote()->transact(::droid::os::BnServiceManager::TRANSACTION_addService/* function index */, data, &reply);
 
         return ::droid::binder::Status::fromExceptionCode(10086);
     }

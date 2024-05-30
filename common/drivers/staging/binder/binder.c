@@ -606,34 +606,41 @@ static struct binder_node* binder_get_node_refs_for_txn(
     return target_node;
 }
 
-static void binder_transaction(
-        struct binder_proc* proc
-        , struct binder_thread* thread
-        , struct binder_transaction_data *tr
-        , int reply
-        , binder_size_t extra_buffer_size) {
+static void binder_transaction(struct binder_proc *proc,
+                               struct binder_thread *thread,
+                               struct binder_transaction_data *tr, int reply,
+                               binder_size_t extra_buffers_size)
+{
     int ret;
-    struct binder_transaction* t;
-    struct binder_work* w;
-    struct binder_work* temp_complete;
+    struct binder_transaction *t;
+    struct binder_work *w;
+    struct binder_work *tcomplete;
     binder_size_t buffer_offset = 0;
     binder_size_t off_start_offset, off_end_offset;
     binder_size_t off_min;
     binder_size_t sg_buf_offset, sg_buf_end_offset;
-    struct binder_proc* target_proc = NULL;
-    struct binder_thread* target_thread = NULL;
-    struct binder_node* target_node = NULL;
-    struct binder_transaction* in_reply_to = NULL;
-    struct binder_transaction_log_entry* e;
+    binder_size_t user_offset = 0;
+    struct binder_proc *target_proc = NULL;
+    struct binder_thread *target_thread = NULL;
+    struct binder_node *target_node = NULL;
+    struct binder_transaction *in_reply_to = NULL;
+    struct binder_transaction_log_entry *e;
     uint32_t return_error = 0;
     uint32_t return_error_param = 0;
     uint32_t return_error_line = 0;
     binder_size_t last_fixup_obj_off = 0;
     binder_size_t last_fixup_min_off = 0;
-    struct binder_context* context = proc->context;
+    struct binder_context *context = proc->context;
     int t_debug_id = atomic_inc_return(&binder_last_id);
-    char* sec_ctx = NULL;
-    u32 sec_ctx_sz = 0;
+    char *secctx = NULL;
+    u32 secctx_sz = 0;
+    const void __user *user_buffer = (const void __user *)
+            (uintptr_t)tr->data.ptr.buffer;
+    bool is_nested = false;
+
+    debug_binder(BINDER_DEBUG_TRANSACTION
+        , "%s: start.\n"
+        , __FUNCTION__);
 
     e = binder_transaction_log_add(&binder_transaction_log);
     e->debug_id = t_debug_id;
@@ -642,94 +649,136 @@ static void binder_transaction(
     e->from_thread = thread->pid;
     e->target_handle = tr->target.handle;
     e->data_size = tr->data_size;
-    e->offset_size = tr->offsets_size;
+    e->offsets_size = tr->offsets_size;
     strscpy(e->context_name, proc->context->name, BINDERFS_MAX_NAME);
 
-    /*
-
-    if (reply) {
-        // todo(20220514-104654 we are in no reply transaction)
-        pr_err("[reply] in current debug term"
-               ", we'll not into this case!");
-    } else {
-        if (tr->target.handle) {
-            // todo(20220513-102424 only handle target==servicemanager)
-            pr_err("[target.handle != 0] current"
-                   ", we debug on servicemanager");
-        } else {
+    if (reply) {} else {
+        if (tr->target.handle) {} else {
             mutex_lock(&context->context_mgr_node_lock);
             target_node = context->binder_context_mgr_node;
-            if (target_node) {
+            if (target_node)
                 target_node = binder_get_node_refs_for_txn(
-                        target_node, &target_proc, &return_error);
-            } else {
+                        target_node, &target_proc,
+                        &return_error);
+            else
                 return_error = BR_DEAD_REPLY;
-            }
             mutex_unlock(&context->context_mgr_node_lock);
-            if (target_node && target_proc->pid == proc->pid) {
-                // todo(20220513-144942 module_param_call...stop_on_user)
-                pr_err("%d:%d got transaction to context manager from"
-                       " process owning it\n", proc->pid, thread->pid);
-                return_error = BR_FAILED_REPLY;
-                return_error_param = -EINVAL;
-                return_error_line = __LINE__;
-                goto err_invalid_target_handle;
-            }
+            if (target_node && target_proc->pid == proc->pid) {}
         }
-        if (!target_node) {
-            return_error_param = -EINVAL;
-            return_error_line = __LINE__;
-            goto err_dead_binder;
-        }
-
+        if (!target_node) {}
         e->to_node = target_node->debug_id;
-        // todo(20220514-105009 security check)
+        if (WARN_ON(proc == target_proc)) {}
         binder_inner_proc_lock(proc);
 
-        w = list_first_entry_or_null(
-                &thread->todo, struct binder_work, entry);
-        if (!(tr->flags & TF_ONE_WAY)
-            && w
-            && w->type == BINDER_WORK_TRANSACTION) {
+        w = list_first_entry_or_null(&thread->todo,
+                                     struct binder_work, entry);
+        if (!(tr->flags & TF_ONE_WAY) && w &&
+            w->type == BINDER_WORK_TRANSACTION) {}
 
-        }
-
+        if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {}
+        binder_inner_proc_unlock(proc);
     }
+    if (target_thread)
+        e->to_thread = target_thread->pid;
+    e->to_proc = target_proc->pid;
 
-    */
+    /* TODO: reuse incoming transaction for reply */
+    t = kzalloc(sizeof(*t), GFP_KERNEL);
+    if (t == NULL) {}
+    INIT_LIST_HEAD(&t->fd_fixups);
+    binder_stats_created(BINDER_STAT_TRANSACTION);
+    spin_lock_init(&t->lock);
 
+    tcomplete = kzalloc(sizeof(*tcomplete), GFP_KERNEL);
+    if (tcomplete == NULL) {}
+    binder_stats_created(BINDER_STAT_TRANSACTION_COMPLETE);
 
-    debug_binder(BINDER_DEBUG_TRANSACTION
-                 , "%s\n"
-                 , __FUNCTION__);
+    t->debug_id = t_debug_id;
 
-    /*
-err_dead_binder:
-err_invalid_target_handle:
-    if (target_thread) {
-        binder_thread_dec_tmpref(target_thread);
-    }
-    if (target_proc) {
-        binder_proc_dec_tmpref(target_proc);
-    }
-    if (binder_node) {
-        binder_dec_node(target_node, 1, 0);
-        binder_dec_node_tmpref(target_node);
-    }
-    // todo(20220514-103757 print debug info)
-    // todo(20220514-103804 print to binder log)
-    BUG_ON(thread->return_error.cmd != BR_OK);
-    if (in_reply_to) {
-        // todo(20220514-104144 trace...)
-        binder_restore_priority(current, in_reply_to->saved_priority);
-        binder_enqueue_thread_work(thread, &thread->return_error.work);
-        binder_send_failed_reply(in_reply_to, return_error);
+    if (!reply && !(tr->flags & TF_ONE_WAY))
+        t->from = thread;
+    else
+        t->from = NULL;
+    t->sender_euid = task_euid(proc->tsk);
+    t->to_proc = target_proc;
+    t->to_thread = target_thread;
+    t->code = tr->code;
+    t->flags = tr->flags;
+    t->is_nested = is_nested;
+    if (!(t->flags & TF_ONE_WAY) &&
+        binder_supported_policy(current->policy)) {
+        /* Inherit supported policies for synchronous transactions */
+        t->priority.sched_policy = current->policy;
+        t->priority.prio = current->normal_prio;
     } else {
-        thread->return_error.cmd = return_error;
-        binder_enqueue_thread_work(thread, &thread->return_error.work);
+        /* Otherwise, fall back to the default priority */
+        t->priority = target_proc->default_priority;
     }
+/*
+    t->buffer = binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
+                                     tr->offsets_size, extra_buffers_size,
+                                     !reply && (t->flags & TF_ONE_WAY), current->tgid);
+    if (IS_ERR(t->buffer)) {}
+    if (secctx) {}
+    t->buffer->debug_id = t->debug_id;
+    t->buffer->transaction = t;
+    t->buffer->target_node = target_node;
+    t->buffer->clear_on_free = !!(t->flags & TF_CLEAR_BUF);
 
-    */
+    if (binder_alloc_copy_user_to_buffer(
+            &target_proc->alloc,
+            t->buffer,
+            ALIGN(tr->data_size, sizeof(void *)),
+            (const void __user *)
+                    (uintptr_t)tr->data.ptr.offsets,
+            tr->offsets_size)) {}
+    if (!IS_ALIGNED(tr->offsets_size, sizeof(binder_size_t))) {}
+    if (!IS_ALIGNED(extra_buffers_size, sizeof(u64))) {}
+    off_start_offset = ALIGN(tr->data_size, sizeof(void *));
+    buffer_offset = off_start_offset;
+    off_end_offset = off_start_offset + tr->offsets_size;
+    sg_buf_offset = ALIGN(off_end_offset, sizeof(void *));
+    sg_buf_end_offset = sg_buf_offset + extra_buffers_size -
+                        ALIGN(secctx_sz, sizeof(u64));
+    off_min = 0;
+    for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
+         buffer_offset += sizeof(binder_size_t)) {}
+    if (binder_alloc_copy_user_to_buffer(
+            &target_proc->alloc,
+            t->buffer, user_offset,
+            user_buffer + user_offset,
+            tr->data_size - user_offset)) {}
+    tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
+    t->work.type = BINDER_WORK_TRANSACTION;
+
+    if (reply) {} else if (!(t->flags & TF_ONE_WAY)) {
+        BUG_ON(t->buffer->async_transaction != 0);
+        binder_inner_proc_lock(proc);
+        binder_enqueue_deferred_thread_work_ilocked(thread, tcomplete);
+        t->need_reply = 1;
+        t->from_parent = thread->transaction_stack;
+        thread->transaction_stack = t;
+        binder_inner_proc_unlock(proc);
+        return_error = binder_proc_transaction(t,
+                                               target_proc, target_thread);
+        if (return_error) {}
+    } else {}
+    if (target_thread)
+        binder_thread_dec_tmpref(target_thread);
+    binder_proc_dec_tmpref(target_proc);
+*/
+    if (target_node)
+        binder_dec_node_tmpref(target_node);
+    /*
+     * write barrier to synchronize with initialization
+     * of log entry
+     */
+    smp_wmb();
+    WRITE_ONCE(e->debug_id_done, t_debug_id);
+    debug_binder(BINDER_DEBUG_TRANSACTION
+            , "%s: end\n"
+            , __FUNCTION__);
+    return;
 }
 
 static int binder_thread_write(

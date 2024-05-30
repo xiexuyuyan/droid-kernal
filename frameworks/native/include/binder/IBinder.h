@@ -23,6 +23,7 @@ namespace droid {
             : public virtual RefBase {
     public:
         enum {
+            FIRST_CALL_TRANSACTION = 0x00000001,
             PING_TRANSACTION = B_PACK_CHARS('_', 'P', 'N', 'G'),
         };
         IBinder();

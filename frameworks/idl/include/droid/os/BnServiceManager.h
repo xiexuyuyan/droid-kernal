@@ -9,6 +9,9 @@ namespace droid {
         class BnServiceManager :
                 public ::droid::BnInterface<IServiceManager> {
         public:
+            static constexpr uint32_t TRANSACTION_getService = ::droid::IBinder::FIRST_CALL_TRANSACTION + 0;
+            static constexpr uint32_t TRANSACTION_checkService = ::droid::IBinder::FIRST_CALL_TRANSACTION + 1;
+            static constexpr uint32_t TRANSACTION_addService = ::droid::IBinder::FIRST_CALL_TRANSACTION + 2;
             explicit BnServiceManager();
         };
     } // namespace os

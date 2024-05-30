@@ -33,11 +33,16 @@ static char LogPriorityCharacter[] {
 int main(int argc, char* argv[]) {
     std::cout<<"---start print log---"<<std::endl;
 
-    int keyWordStart = 2;
+    int keyWordStart = 3;
 
-    int withTimestamp = 0;
+    int withTimestamp = 3;
     if (argc > 1) {
         withTimestamp = argv[1][0] - '0';
+    }
+
+    int withProcess = 1;
+    if (argc > 2) {
+        withProcess = argv[2][0] - '0';
     }
 
     for (int i = 1; i < argc; ++i) {
@@ -74,24 +79,30 @@ int main(int argc, char* argv[]) {
                 continue;
             }
 
-            {
+            if (1 == withProcess) {
                 std::cout<<entry->pid<<" ";
                 std::cout<<entry->tid<<" ";
             }
 
-            if (withTimestamp) {
-                std::cout<<entry->sec<<".";
-                std::cout<<(entry->nsec / 100)<<" ";
-                // std::cout<<entry->real_sec<<" ";
-                // std::cout<<entry->real_nsec<<" ";
-
-                time_t t = entry->real_sec;
-                struct tm* time = localtime(&t);
-                char nowStr[64];
-                strftime(nowStr, 64, "%Y-%m-%d %H:%M:%S", time);
-
-                std::cout<<nowStr<<".";
-                std::cout<<(entry->real_nsec / 1000000)<<" ";
+            char *timeFormat = NULL;
+            switch (withTimestamp) {
+                case 0:
+                    break;
+                case 3:
+                    std::cout<<entry->sec<<".";
+                    std::cout<<(entry->nsec / 100)<<" ";
+                case 2:
+                    timeFormat = "%Y-%m-%d %H:%M:%S";
+                case 1:
+                    timeFormat = const_cast<char *>(
+                            (timeFormat == NULL) ? "%H:%M:%S" : timeFormat);
+                    time_t t = entry->real_sec;
+                    struct tm* time = localtime(&t);
+                    char nowStr[64];
+                    strftime(nowStr, 64, timeFormat, time);
+                    std::cout<<nowStr<<".";
+                    std::cout<<(entry->real_nsec / 1000000)<<" ";
+                    break;
             }
 
             std::cout<<LogPriorityCharacter[priority - '0'];

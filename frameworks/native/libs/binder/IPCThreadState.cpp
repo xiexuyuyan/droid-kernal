@@ -102,7 +102,7 @@ restart:
 
         LOGF_V(TAG, "transact: Send from pid(%d) uid(%d) %s"
               , getpid(), getuid()
-              , (flags & TF_ONE_WAY) ? "READ REPLY" : "ONE WAY");
+              , (flags & TF_ONE_WAY) == 0 ? "READ REPLY" : "ONE WAY");
         err = writeTransactionData(
                 BC_TRANSACTION, flags, handle, code, data, nullptr);
 
